@@ -16,6 +16,8 @@ export default function PdfExportModal({ events, venues, departments, isAdmin, o
   const [venueId, setVenueId] = useState(isAdmin ? (initial.venueFilter || '') : '');
   const [includePending, setIncludePending] = useState(false);
   const [publicOnly, setPublicOnly] = useState(true);
+  const [template, setTemplate] = useState('decorative');
+  const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -45,7 +47,8 @@ export default function PdfExportModal({ events, venues, departments, isAdmin, o
     setBusy(true); setErr('');
     try {
       const { renderCalendarPdf, pdfFilename } = await import('../services/pdfCalendar.js');
-      await renderCalendarPdf(model, pdfFilename(model));
+      const noteLines = isAdmin ? notes.split(/\r?\n/).map(s => s.replace(/^\s*\*\s*/, '').trim()).filter(Boolean) : [];
+      await renderCalendarPdf(model, pdfFilename(model), { template: isAdmin ? template : 'decorative', notes: noteLines });
       onClose();
     } catch (e) {
       setErr(`Couldn't create the PDF: ${e.message || e}`);
@@ -114,6 +117,18 @@ export default function PdfExportModal({ events, venues, departments, isAdmin, o
             </label>
           </div>
         )}
+
+        {isAdmin && (<>
+          <label style={{ marginTop: 12 }}>PDF template</label>
+          <div className="segmented" role="group" aria-label="PDF template" style={{ marginBottom: 8 }}>
+            {[['decorative', 'Decorative'], ['classic', 'Classic']].map(([k, n]) => (
+              <button key={k} type="button" aria-pressed={template === k} onClick={() => setTemplate(k)}>{n}</button>
+            ))}
+          </div>
+          <label htmlFor="pdf-notes">Notes (optional, one per line, printed below the table)</label>
+          <textarea id="pdf-notes" rows={3} value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="For Niaz contact …" />
+        </>)}
 
         <p className="muted" style={{ marginTop: 12 }}>
           {model ? `${model.eventCount} event(s) in ${model.footerLabel}. Only confirmed events are listed.` : 'Choose a month.'}

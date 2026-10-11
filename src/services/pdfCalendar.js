@@ -1,17 +1,39 @@
-// Renders the monthly PDF calendar: draws the MWA artwork (with its month-specific text
-// erased — see scripts/build-pdf-template.py) onto a canvas, writes the selected month's
-// data over it, and embeds each page into an A4 PDF. jsPDF is loaded lazily.
+// Renders the monthly PDF calendar onto a canvas and embeds each page in an A4 PDF (jsPDF, lazy-loaded).
+// Two templates:
+//   decorative (default, portrait) - MWA artwork with its month-specific text erased (scripts/build-pdf-template.py)
+//   classic    (landscape)         - plain light-blue sheet with the building photo and a table
+// Only the first page carries the header; continuation pages contain just table rows (and notes).
 import bgUrl from '../assets/pdf-template-bg.jpg';
 import logoUrl from '../assets/mwa-logo.png';
+import photoUrl from '../assets/pdf-classic-photo.jpg';
 
-const W = 864, H = 1223, SCALE = 2;
+const SCALE = 2;
 const GREEN = '#0b3b2e', GOLD = '#b08d3f', CREAM_TXT = '#f6ecd0', INK = '#2d2d2d', NAVY = '#1b1b6b';
 const SERIF = "'Playfair Display', 'Times New Roman', Georgia, serif";
 const BODY = "'Times New Roman', 'Liberation Serif', Georgia, serif";
+const SANS = "Arial, 'Helvetica Neue', Helvetica, sans-serif";
 const ARABIC = "'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', 'Times New Roman', serif";
 
-const COL = { x0: 28, x1: 838, c1: 110, c2: 267, c3: 590, eventHalf: 232 };
-const ROWS_TOP = 664, ROWS_BOTTOM = 1040;
+const TEMPLATES = {
+  decorative: {
+    W: 864, H: 1223, orientation: 'portrait', mmW: 210, mmH: 297,
+    cols: { x0: 28, x1: 838, c1: 110, c2: 267, c3: 590 },
+    colW: 464, minH: 60, pad: 16,
+    tFont: `bold 21px ${BODY}`, tLH: 24, dFont: `15px ${BODY}`, dLH: 19, deptLH: 20, deptFont: `bold 15px ${BODY}`,
+    tColor: GREEN, dColor: '#444', deptColor: NAVY, rowFont: 19, rowColor: INK,
+    firstTop: 664, contTop: 104, bottom: 1040,
+    noteFont: `15px ${BODY}`, noteLH: 20, noteColor: '#444', noteX: 40, noteW: 780
+  },
+  classic: {
+    W: 1170, H: 827, orientation: 'landscape', mmW: 297, mmH: 210,
+    cols: { x0: 69, x1: 1099, c1: 166, c2: 347, c3: 764, lines: [264, 430] },
+    colW: 620, minH: 50, pad: 14,
+    tFont: `bold 19px ${SANS}`, tLH: 24, dFont: `18px ${BODY}`, dLH: 22, deptLH: 22, deptFont: `18px ${BODY}`,
+    tColor: '#111', dColor: '#333', deptColor: '#1414c8', rowFont: 21, rowColor: '#222',
+    firstTop: 477, contTop: 91, bottom: 790,
+    noteFont: `19px ${SANS}`, noteLH: 27, noteColor: '#858b91', noteX: 76, noteW: 1010
+  }
+};
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -25,7 +47,7 @@ function loadImage(src) {
 async function ensureFonts() {
   if (!document.fonts?.load) return;
   const wants = [`700 40px 'Playfair Display'`, `700 40px 'Amiri'`, `400 40px 'Amiri'`];
-  await Promise.all(wants.map(f => document.fonts.load(f, 'Aa ربيع').catch(() => null)));
+  await Promise.all(wants.map(f => document.fonts.load(f, 'Aa \u0631\u0628\u064a\u0639').catch(() => null)));
 }
 
 function setSpacing(ctx, px) { if ('letterSpacing' in ctx) ctx.letterSpacing = `${px}px`; }
@@ -64,40 +86,124 @@ function drawRich(ctx, segs, cx, y, size, color) {
   ctx.textAlign = 'center';
 }
 
-const hijriSegs = h => (h ? [{ t: String(h.day) }, { t: h.suffix, sup: true }, { t: ` ${h.month}` }] : [{ t: '—' }]);
+const hijriSegs = h => (h ? [{ t: String(h.day) }, { t: h.suffix, sup: true }, { t: ` ${h.month}` }] : [{ t: '\u2014' }]);
 const gregSegs = g => [{ t: `${g.dow}, ${g.day}` }, { t: g.suffix, sup: true }, { t: ` ${g.month}` }];
 
-function layoutRows(ctx, model) {
-  const colW = COL.eventHalf * 2;
-  const rows = model.rows.map(r => {
+// Splits rows (and the optional notes block) across pages. Page 1 starts at cfg.firstTop,
+// later pages at cfg.contTop (no header).
+function layoutPages(ctx, model, cfg, notes) {
+  const items = model.rows.map(r => {
     const blocks = r.events.map(e => {
-      ctx.font = `bold 21px ${BODY}`;
-      const title = wrap(ctx, e.pending ? `${e.title} (Pending)` : e.title, colW);
-      ctx.font = `15px ${BODY}`;
-      const detail = wrap(ctx, e.detail, colW);
-      const h = title.length * 24 + detail.length * 19 + (e.department ? 20 : 0);
+      ctx.font = cfg.tFont;
+      const title = wrap(ctx, e.pending ? `${e.title} (Pending)` : e.title, cfg.colW);
+      ctx.font = cfg.dFont;
+      const detail = wrap(ctx, e.detail, cfg.colW);
+      const h = title.length * cfg.tLH + detail.length * cfg.dLH + (e.department ? cfg.deptLH : 0);
       return { ...e, titleLines: title, detailLines: detail, h };
     });
     const content = blocks.reduce((n, b) => n + b.h, 0) + (blocks.length - 1) * 10;
-    return { ...r, blocks, height: Math.max(60, content + 16) };
+    return { ...r, blocks, content, height: Math.max(cfg.minH, content + cfg.pad) };
   });
-  const pages = [[]];
-  let y = ROWS_TOP;
-  for (const r of rows) {
-    if (y + r.height > ROWS_BOTTOM && pages[pages.length - 1].length) { pages.push([]); y = ROWS_TOP; }
-    pages[pages.length - 1].push(r);
-    y += r.height;
+  if (notes.length) {
+    ctx.font = cfg.noteFont;
+    const lines = notes.flatMap(n => wrap(ctx, `* ${n}`, cfg.noteW));
+    items.push({ isNotes: true, lines, height: lines.length * cfg.noteLH + 26 });
+  }
+  const pages = [{ items: [], top: cfg.firstTop }];
+  let y = cfg.firstTop;
+  for (const it of items) {
+    const cur = pages[pages.length - 1];
+    if (y + it.height > cfg.bottom && cur.items.length) {
+      pages.push({ items: [], top: cfg.contTop });
+      y = cfg.contTop;
+    }
+    pages[pages.length - 1].items.push(it);
+    y += it.height;
   }
   return pages;
 }
 
-function drawPage(ctx, { bg, logo }, model, rows, pageNo, pageCount) {
-  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+function drawItems(ctx, cfg, page, emptyMsg) {
+  const { cols } = cfg;
+  let y = page.top;
+  if (cfg.drawGrid && page.items.length) { // top rule for continuation pages
+    ctx.strokeStyle = cfg.gridColor; ctx.lineWidth = 1;
+    if (page.top === cfg.contTop) { ctx.beginPath(); ctx.moveTo(cols.x0, y); ctx.lineTo(cols.x1, y); ctx.stroke(); }
+  }
+  if (!page.items.length) {
+    ctx.font = `italic 19px ${BODY}`; ctx.fillStyle = '#6b6b6b'; ctx.textAlign = 'center';
+    ctx.fillText(emptyMsg, (cols.x0 + cols.x1) / 2, y + 50);
+    return;
+  }
+  for (const r of page.items) {
+    if (r.isNotes) {
+      ctx.textAlign = 'left'; ctx.font = cfg.noteFont; ctx.fillStyle = cfg.noteColor;
+      r.lines.forEach((l, i) => ctx.fillText(l, cfg.noteX, y + 26 + i * cfg.noteLH));
+      ctx.textAlign = 'center';
+      y += r.height;
+      continue;
+    }
+    const mid = y + r.height / 2 + 6;
+    drawRich(ctx, hijriSegs(r.hijri), cols.c1, mid, cfg.rowFont, cfg.rowColor);
+    drawRich(ctx, gregSegs(r.greg), cols.c2, mid, cfg.rowFont, cfg.rowColor);
+    let ey = y + (r.height - r.content) / 2;
+    for (const b of r.blocks) {
+      ctx.fillStyle = cfg.tColor; ctx.font = cfg.tFont;
+      b.titleLines.forEach(l => { ey += cfg.tLH; ctx.fillText(l, cols.c3, ey - 6); });
+      ctx.fillStyle = cfg.dColor; ctx.font = cfg.dFont;
+      b.detailLines.forEach(l => { ey += cfg.dLH; ctx.fillText(l, cols.c3, ey - 5); });
+      if (b.department) { ctx.fillStyle = cfg.deptColor; ctx.font = cfg.deptFont; ey += cfg.deptLH; ctx.fillText(b.department, cols.c3, ey - 6); }
+      ey += 10;
+    }
+    y += r.height;
+    ctx.strokeStyle = cfg.gridColor; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cols.x0, y); ctx.lineTo(cols.x1, y); ctx.stroke();
+    if (cfg.drawGrid) {
+      ctx.beginPath();
+      for (const x of [cols.x0, ...cols.lines, cols.x1]) { ctx.moveTo(x, y - r.height); ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+  }
+}
+
+function drawDecorative(ctx, assets, model, page, pageNo, pageCount) {
+  const cfg = TEMPLATES.decorative;
+  const { W, H } = cfg;
   ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(bg, 0, 0, W, H);
+  ctx.drawImage(assets.bg, 0, 0, W, H);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
+  if (pageNo > 1) {
+    // Continuation page: no header artwork, the rows panel simply extends to the top.
+    ctx.fillStyle = '#0b3b2e';
+    ctx.fillRect(0, 0, W, 1062);
+    ctx.fillStyle = '#f6edd8';
+    ctx.strokeStyle = '#c9a24d'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(6, 16, W - 12, 1060, 16); ctx.fill(); ctx.stroke();
+    // Repeat only the column header so the columns stay identifiable.
+    const cols = cfg.cols;
+    ctx.fillStyle = '#0b3b2e'; ctx.strokeStyle = '#c9a24d'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(cols.x0, 44, cols.x1 - cols.x0, 56, 8); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    for (const x of [192, 344]) { ctx.moveTo(x, 44); ctx.lineTo(x, 100); }
+    ctx.stroke();
+    ctx.font = `bold 19px ${BODY}`; ctx.fillStyle = CREAM_TXT;
+    ctx.fillText('Islamic Dates', cols.c1, 79);
+    ctx.fillText('MWA Event Date', cols.c2, 79);
+    ctx.fillText('Event', cols.c3, 79);
+  } else {
+    drawDecorativeHeader(ctx, assets, model);
+  }
+
+  drawItems(ctx, { ...cfg, gridColor: '#cdb27a' }, page, 'No events scheduled for this selection.');
+  ctx.textAlign = 'right'; ctx.fillStyle = '#333'; ctx.font = `16px ${BODY}`;
+  ctx.fillText(model.footerLabel, 832, 1056);
+  if (pageCount > 1) { ctx.textAlign = 'left'; ctx.fillText(`Page ${pageNo} of ${pageCount}`, 34, 1056); }
+}
+
+function drawDecorativeHeader(ctx, { logo }, model) {
+  const cfg = TEMPLATES.decorative;
   // Logo centred at the very top, association name beneath it.
   const lh = 50, lw = lh * logo.width / logo.height;
   ctx.drawImage(logo, 460 - lw / 2, 4, lw, lh);
@@ -150,52 +256,99 @@ function drawPage(ctx, { bg, logo }, model, rows, pageNo, pageCount) {
   // Table header labels.
   ctx.font = `bold 19px ${BODY}`;
   ctx.fillStyle = CREAM_TXT;
-  ctx.fillText('Islamic Dates', COL.c1, 634);
-  ctx.fillText('MWA Event Date', COL.c2, 634);
-  ctx.fillText('Event', COL.c3, 634);
-
-  // Rows.
-  let y = ROWS_TOP;
-  if (!rows.length) {
-    ctx.font = `italic 19px ${BODY}`; ctx.fillStyle = '#6b6b6b';
-    ctx.fillText('No events scheduled for this selection.', (COL.x0 + COL.x1) / 2, y + 50);
-  }
-  for (const r of rows) {
-    const mid = y + r.height / 2 + 6;
-    drawRich(ctx, hijriSegs(r.hijri), COL.c1, mid, 19, INK);
-    drawRich(ctx, gregSegs(r.greg), COL.c2, mid, 19, INK);
-    let ey = y + (r.height - (r.blocks.reduce((n, b) => n + b.h, 0) + (r.blocks.length - 1) * 10)) / 2;
-    for (const b of r.blocks) {
-      ctx.fillStyle = GREEN; ctx.font = `bold 21px ${BODY}`;
-      b.titleLines.forEach(l => { ey += 24; ctx.fillText(l, COL.c3, ey - 6); });
-      ctx.fillStyle = '#444'; ctx.font = `15px ${BODY}`;
-      b.detailLines.forEach(l => { ey += 19; ctx.fillText(l, COL.c3, ey - 5); });
-      if (b.department) { ctx.fillStyle = NAVY; ctx.font = `bold 15px ${BODY}`; ey += 20; ctx.fillText(b.department, COL.c3, ey - 6); }
-      ey += 10;
-    }
-    y += r.height;
-    ctx.strokeStyle = '#cdb27a'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(COL.x0, y); ctx.lineTo(COL.x1, y); ctx.stroke();
-  }
-
-  ctx.textAlign = 'right'; ctx.fillStyle = '#333'; ctx.font = `16px ${BODY}`;
-  ctx.fillText(model.footerLabel, 832, 1056);
-  if (pageCount > 1) { ctx.textAlign = 'left'; ctx.fillText(`Page ${pageNo} of ${pageCount}`, 34, 1056); }
+  ctx.fillText('Islamic Dates', cfg.cols.c1, 634);
+  ctx.fillText('MWA Event Date', cfg.cols.c2, 634);
+  ctx.fillText('Event', cfg.cols.c3, 634);
 }
 
-export async function renderCalendarPdf(model, filename = 'MWA-Calendar.pdf') {
-  const [{ jsPDF }, bg, logo] = await Promise.all([import('jspdf'), loadImage(bgUrl), loadImage(logoUrl), ensureFonts()]);
+function drawClassic(ctx, assets, model, page, pageNo, pageCount) {
+  const cfg = { ...TEMPLATES.classic, drawGrid: true, gridColor: '#1d5f8c' };
+  const { W, H, cols } = cfg;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#c1e4f7';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'center';
+
+  if (pageNo === 1) {
+    // Association name, stretched to the full table width.
+    const org = 'MUHAMMADI WELFARE ASSOCIATION';
+    ctx.font = `bold 56px ${SANS}`;
+    const sx = 1032 / ctx.measureText(org).width;
+    ctx.save();
+    ctx.translate(68, 100); ctx.scale(sx, 1);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#0f4a69';
+    ctx.fillText(org, 0, 0);
+    ctx.restore();
+
+    ctx.drawImage(assets.photo, 69, 118, 1025, 234);
+
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.font = `bold 44px ${BODY}`;
+    ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 4; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+    ctx.fillStyle = '#111';
+    ctx.fillText('Monthly Calendar', 62, 388);
+    ctx.restore();
+    ctx.textAlign = 'right'; ctx.fillStyle = '#2d6a8a';
+    fit(ctx, model.footerLabel, s => `300 ${s}px 'Segoe UI', ${SANS}`, 40, 520, 22);
+    ctx.fillText(model.footerLabel, 1097, 388);
+    ctx.textAlign = 'center';
+  }
+
+  // Column header: on every page, so continuation pages stay readable.
+  const hy = pageNo === 1 ? 421 : cfg.contTop - 55;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#165f82';
+  ctx.fillRect(cols.x0, hy, cols.x1 - cols.x0, 55);
+  ctx.strokeStyle = '#8fb6cf'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (const x of cols.lines) { ctx.moveTo(x, hy); ctx.lineTo(x, hy + 55); }
+  ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = `bold 23px ${SANS}`;
+  ctx.fillText('Islamic Dates', cols.c1, hy + 35);
+  ctx.fillText('MWA', cols.c2, hy + 22);
+  ctx.fillText('Event Date', cols.c2, hy + 47);
+  ctx.font = `bold 29px ${SANS}`;
+  ctx.fillText('Event', cols.c3, hy + 39);
+
+  drawItems(ctx, cfg, page, 'No events scheduled for this selection.');
+  if (pageCount > 1) {
+    ctx.textAlign = 'right'; ctx.fillStyle = '#5d7f94'; ctx.font = `14px ${SANS}`;
+    ctx.fillText(`Page ${pageNo} of ${pageCount}`, 1099, H - 10);
+  }
+}
+
+/**
+ * @param {object} model   from buildPdfModel
+ * @param {string} filename
+ * @param {{template?: 'decorative'|'classic', notes?: string[]}} [opts]
+ */
+export async function renderCalendarPdf(model, filename = 'MWA-Calendar.pdf', opts = {}) {
+  const template = opts.template === 'classic' ? 'classic' : 'decorative';
+  const notes = (opts.notes || []).map(n => String(n).trim()).filter(Boolean);
+  const cfg = TEMPLATES[template];
+  const [{ jsPDF }, bg, logo, photo] = await Promise.all([
+    import('jspdf'),
+    template === 'decorative' ? loadImage(bgUrl) : null,
+    template === 'decorative' ? loadImage(logoUrl) : null,
+    template === 'classic' ? loadImage(photoUrl) : null,
+    ensureFonts()
+  ]);
   const canvas = document.createElement('canvas');
-  canvas.width = W * SCALE; canvas.height = H * SCALE;
+  canvas.width = cfg.W * SCALE; canvas.height = cfg.H * SCALE;
   const ctx = canvas.getContext('2d');
-  const pages = layoutRows(ctx, model);
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-  pages.forEach((rows, i) => {
-    drawPage(ctx, { bg, logo }, model, rows, i + 1, pages.length);
-    if (i > 0) pdf.addPage();
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  const pages = layoutPages(ctx, model, cfg, notes);
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: cfg.orientation, compress: true });
+  pages.forEach((page, i) => {
+    ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+    if (template === 'classic') drawClassic(ctx, { photo }, model, page, i + 1, pages.length);
+    else drawDecorative(ctx, { bg, logo }, model, page, i + 1, pages.length);
+    if (i > 0) pdf.addPage('a4', cfg.orientation);
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, cfg.mmW, cfg.mmH, undefined, 'FAST');
   });
-  pdf.setProperties({ title: `MWA Monthly Calendar – ${model.footerLabel}` });
+  pdf.setProperties({ title: `MWA Monthly Calendar \u2013 ${model.footerLabel}` });
   pdf.save(filename);
   return pages.length;
 }

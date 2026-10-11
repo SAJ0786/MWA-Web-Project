@@ -360,5 +360,8 @@ conflict checks, the 6h rule, Excel and all admin features are unchanged.
 - Public visitors can only pick the month/basis; the calendar is always MWA Programs events at all venues (no department/venue pickers). Admins keep every option.
 - **MWA Programs is never private**: confirmed MWA Programs events are always projected publicly (`functions/publicProjection.js`), regardless of the stored visibility flag. Requires a functions deploy.
 - Artwork: `scripts/build-pdf-template.py` erases the month-specific text from the supplied design (`scripts/pdf-template-source.jpg`) to produce `src/assets/pdf-template-bg.jpg`; MWA logo in `src/assets/mwa-logo.png`. Text is drawn at runtime (`src/services/pdfCalendar.js`, data in `pdfModel.js`). jsPDF is lazy-loaded.
+- **Continuation pages** carry no page header (logo/title/photo); only the column header, table rows and notes continue on pages 2+.
+- **Two templates (admin choice)**: *Decorative* (default, portrait artwork) and *Classic* (landscape, light-blue sheet with building photo, source in `scripts/pdf-classic-source.jpg`). Public visitors always get Decorative.
+- **Notes (admin)**: optional lines printed below the table as `* note` on the last page (both templates).
 - Footer contact/dua lines are part of the artwork; edit the source image and re-run the script to change them.
 - Fonts: Playfair Display and Amiri (Google Fonts) with serif fallbacks offline.
