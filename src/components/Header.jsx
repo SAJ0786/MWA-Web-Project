@@ -1,21 +1,22 @@
-import { CalendarDays, Plus, ShieldCheck, LogOut } from 'lucide-react';
+import { CalendarDays, ListChecks, MoonStar, Plus, ShieldCheck, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 export default function Header({ tab, setTab, onNewBooking }) {
   const { user, isAdmin, logout } = useAuth();
-  const navBtn = (id, label) => (
-    <button type="button" className={`lb lb-nav ${tab === id ? 'nav-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>{label}</button>
+  const navBtn = (id, label, Icon) => (
+    <button type="button" className={`lb lb-nav ${tab === id ? 'nav-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}><Icon />{label}</button>
   );
   return (
-    <header className="app-header glass-panel">
+    <header className="app-header glass-panel decorative-panel">
       <button type="button" className="brand" onClick={() => setTab('calendar')} aria-label="MWA Central Calendar home">
         <span className="brand-mark"><CalendarDays size={19} /></span>
         <span><strong>MWA Central</strong><small>Calendar</small></span>
       </button>
       <nav aria-label="Main navigation">
-        {navBtn('calendar', 'Calendar')}
-        {navBtn('bookings', 'Bookings')}
-        {isAdmin && navBtn('admin', 'Admin')}
+        {navBtn('calendar', 'Calendar', CalendarDays)}
+        {navBtn('bookings', 'Bookings', ListChecks)}
+        {navBtn('islamic-events', 'Key Islamic Events', MoonStar)}
+        {isAdmin && navBtn('admin', 'Admin', ShieldCheck)}
       </nav>
       <div className="header-actions">
         <button type="button" className="lb lb-default" onClick={onNewBooking}><Plus />New booking</button>

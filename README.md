@@ -84,3 +84,27 @@ The app will show a clear "Firebase is not configured" message instead of crashi
 Firestore, deploying rules and functions, creating the first admin user).
 
 No deployment has been performed as part of this change.
+
+## Key Islamic Events
+
+The **Key Islamic Events** navigation button opens an annual, three-column directory
+(event title, Hijri date, Gregorian date). It defaults to the current Sydney Hijri year
+and offers five years either side. Gregorian dates use this app's existing moon-sighting
+anchors. **This month**, **Next month** and **Full year** buttons plus a custom month
+dropdown filter the date-ordered list. The first two jump to the actual current/next
+Hijri month (including year rollover); the year selector can browse another year.
+Wiladat/Eid use green, mourning observances red, and other occasions blue,
+matching the Community app. Navigation and admin sections use decorative green/gold
+panels with prominent buttons.
+
+The list is loaded live from Firestore `keyIslamicEvents`, **not from a client-side
+default list**. Admins can edit titles, Hijri day/month and category; saves apply to
+the recurring definition for every year. Non-admin signed-in users and visitors remain
+read-only. Admins can also add a title and Hijri day/month (with category); Gregorian
+dates calculate automatically and new events appear in the correct Hijri date order.
+A revision guard prevents overwriting another admin's changes.
+
+The initial 54 definitions from the Community app are supplied as a one-time,
+create-only migration, not runtime fallback data. Before releasing this feature,
+deploy the updated Firestore rules and import the list using the steps in
+[docs/SETUP.md](docs/SETUP.md#9-key-islamic-events-initial-data).

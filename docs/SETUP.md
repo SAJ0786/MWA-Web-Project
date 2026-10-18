@@ -108,3 +108,40 @@ To redeploy after future code changes, rerun the relevant command(s) above.
 
 Booking submission/decision emails are wired up but **inactive** until SMTP credentials
 are configured as Cloud Functions secrets. See **docs/EMAIL_SETUP.md**.
+
+## 9. Key Islamic Events initial data
+
+This feature needs the updated `firestore.rules` and an initial reference-data import.
+No new Cloud Functions or dependencies are required. The application reads only the
+Firestore collection; an empty collection shows an explicit empty state, and permission
+or network failures show a retryable error, never a hardcoded fallback.
+
+After release is authorized, deploy the rules and run the create-only migration using
+Application Default Credentials for an account allowed to write this project's Firestore.
+Do not put service-account keys in the repository. Firebase CLI sign-in alone does not
+necessarily provide Application Default Credentials.
+
+```powershell
+# With approved Application Default Credentials configured:
+firebase deploy --only firestore:rules --project project-7a4fb531-414f-4ade-88e
+node scripts\seed-islamic-events.cjs project-7a4fb531-414f-4ade-88e
+```
+
+The script uses the existing `functions` dependencies (restore with `npm ci --prefix functions`
+only if absent). Re-running it preserves all existing records and admin edits.
+Build and release Hosting through the existing deployment procedure when authorized.
+Only users with `users/{uid}.role == "admin"` see editing controls.
+
+### Local verification without production writes
+
+```powershell
+firebase emulators:start --only firestore,auth --project demo-mwa-islamic-events
+# In a separate PowerShell window:
+$env:FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080'
+node scripts\seed-islamic-events.cjs demo-mwa-islamic-events
+node --test scripts\islamic-events.rules.test.mjs
+node --test "src\utils\*.test.js"
+```
+
+The rules test uses a demo project, public and non-admin clients, and an emulator-only
+admin profile. Never direct this test at production.

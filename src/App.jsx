@@ -10,6 +10,7 @@ import CalendarPage from './pages/CalendarPage.jsx';
 import BookingsPage from './pages/BookingsPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import BookingModal from './components/BookingModal.jsx';
+import IslamicEventsPage from './pages/IslamicEventsPage.jsx';
 
 export default function App() {
   const { isAdmin } = useAuth();
@@ -65,6 +66,7 @@ export default function App() {
       <div className="app-container">
         <Header tab={tab} setTab={setTab} onNewBooking={() => setNewBooking({ date: null })} />
         <main>
+          {tab === 'islamic-events' && <IslamicEventsPage hijriOverrides={hijriOverrides} />}
           {tab === 'calendar' && (
             <CalendarPage events={events} venues={venues} departments={departments}
               isAdmin={isAdmin} hijriOverrides={hijriOverrides} onSaved={reloadPublic} />

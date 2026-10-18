@@ -365,3 +365,13 @@ conflict checks, the 6h rule, Excel and all admin features are unchanged.
 - **Notes (admin)**: optional lines printed below the table as `* note` on the last page (both templates).
 - Footer contact/dua lines are part of the artwork; edit the source image and re-run the script to change them.
 - Fonts: Playfair Display and Amiri (Google Fonts) with serif fallbacks offline.
+
+## Key Islamic Events and decorative navigation
+- Main menu items and admin sections now use prominent, high-contrast buttons on decorative green/gold panels, with icons, selected states, focus outlines and responsive wrapping.
+- Added **Key Islamic Events**: a public three-column annual directory (title, Hijri date, Gregorian date), defaulting to the current Sydney Hijri year with a +/-5-year selector.
+- Reads live from Firestore `keyIslamicEvents`; includes a create-only seed migration for the Community app's 54 annual observances, with no client-side fallback data.
+- Admins can edit titles, Hijri dates and categories with live Gregorian previews; saved edits persist for all years and use revision-checked transactions. Visitors and non-admin accounts are read-only.
+- Admins can also **Add event** with a title, Hijri day/month and category; Gregorian dates calculate automatically, and the new record is inserted in Hijri date order.
+- Added decorative **This month / Next month / Full year** quick-filter buttons and a custom Hijri-month dropdown for all visitors. Quick filters use the actual current/next Hijri month, including year rollover; the year selector can then browse the same month in another year.
+- Reused the established moon-sighting conversion, and Community category colours (green celebration, red mourning, blue other). Invalid day 30 dates in short months are explicitly marked unavailable.
+- Added schema/permission rules and date/rules tests. Release requires the updated Firestore rules, initial reference-data migration and Hosting build; no Functions changes.

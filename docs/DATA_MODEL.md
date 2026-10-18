@@ -4,6 +4,39 @@ All collections live in the default Firestore database. Timestamps are stored as
 UTC strings (`startAt`/`endAt`) or Firestore server timestamps (`createdAt`, etc.); the UI
 always renders them in the organisation timezone, `Australia/Sydney`.
 
+## `keyIslamicEvents` (public annual reference data)
+
+One document per recurring Islamic observance, keyed by a stable ID such as `ashura`.
+This collection is independent of venue bookings so other app functionality can reuse
+the same definitions through the Firestore SDK. Public read access is intentional.
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | string | Event title; 1-240 characters |
+| `day`, `month` | integer | Annual Hijri date (1-30, 1-12); no fixed year |
+| `category` | string | Wiladat, Shahadat, Wafat, Eid, Ayyam-e-Aza, Amaal, Season or Event |
+| `notes` | string | Reference notes, max 2,000 characters; public, never booking contact data |
+| `enabled` | boolean | Disabled definitions are excluded from the annual list |
+| `priority` | integer | 0-100; tie-breaker for the same Hijri date |
+| `revision` | integer | Starts at zero; increments for each admin update |
+| `updatedAt` | server timestamp | Set on each save |
+| `updatedBy` | string | Saving admin UID, or migration identifier for the initial seed |
+
+Only authenticated **admins** can create/update these records, enforced by Firestore
+rules with a field whitelist and type/range checks. Deletes are denied. Edits are
+transactional and reject a stale revision. Admins can add new recurring definitions
+(enabled, priority 50, revision zero), which immediately enter the date-sorted list.
+The page edits name/day/month/category,
+preserving all remaining metadata. Gregorian dates are derived, never stored:
+`hijriToGregorian(day, month, selectedYear, overrides)`. A day 30 in a 29-day
+month is shown as unavailable rather than silently moving into the next month.
+Changes affect the recurring definition in every year, not a year-specific exception.
+
+Initial data is in `scripts/key-islamic-events.seed.json`, extracted from the Community
+app's `hijriObservanceService.js` (54 definitions). The seed script creates missing
+documents only; it never resets edited or disabled records. There is no runtime
+hardcoded list or silent fallback when Firestore is unavailable.
+
 ## `events` (bookings)
 
 | Field | Type | Notes |

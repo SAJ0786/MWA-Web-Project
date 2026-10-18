@@ -21,9 +21,9 @@ export default function AdminPage({ events, venues, departments, hijriOverrides,
 
   return (
     <section>
-      <div className="bar">
+      <div className="bar decorative-panel admin-menu" role="group" aria-label="Admin sections">
         {['pending', 'confirmed', 'venues', 'departments', 'audit', 'hijri'].map(s => (
-          <button key={s} className={`tab ${sub === s ? 'on' : ''}`} onClick={() => setSub(s)}>
+          <button key={s} className={`tab ${sub === s ? 'on' : ''}`} aria-pressed={sub === s} onClick={() => setSub(s)}>
             {label(s)}{s === 'pending' && pending.length ? ` (${pending.length})` : ''}
           </button>
         ))}

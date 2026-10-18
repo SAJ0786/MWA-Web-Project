@@ -256,3 +256,98 @@ html { scrollbar-gutter: stable; }
   .overlay, #ov { align-items: flex-end; padding: 0; }
   .overlay .dlg, #ov .dlg { width: 100%; max-width: none; max-height: 92vh; max-height: 92dvh; border-radius: 16px 16px 0 0; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* Decorative navigation and the annual Islamic observances directory. */
+.decorative-panel {
+  background-color: #164d48;
+  background-image: radial-gradient(circle at 100% 0%, #d5b87935, transparent 45%),
+    repeating-linear-gradient(45deg, transparent 0 18px, #ffffff05 18px 19px),
+    linear-gradient(120deg, #123e3a, #22645b);
+  border: 1px solid #bda466;
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 4px #ffffff08, 0 8px 24px #133e3a18;
+  color: #fff;
+}
+header.app-header.decorative-panel { background-color: #164d48; border: 1px solid #bda466; flex-wrap: wrap; gap: 16px; }
+.decorative-panel .brand { color: #fff; border-color: #ffffff30; }
+.decorative-panel .brand small, .decorative-panel .visitor { color: #e0eeea; }
+.decorative-panel .brand-mark { background: #d7be7c; color: #153e39; }
+.decorative-panel .lb, .admin-menu .tab {
+  min-height: 44px; height: auto; padding: 10px 14px;
+  border: 1px solid #d6c69b; background: #fffdf5; color: #164d48;
+  font-weight: 700; box-shadow: 0 3px 0 #0000001a;
+}
+.decorative-panel .lb:hover, .admin-menu .tab:hover { background: #f2e5bf; color: #123e3a; border-color: #e6cc83; }
+.decorative-panel .lb.nav-active, .admin-menu .tab.on, .decorative-panel .lb-default {
+  background: #e3c981; border-color: #f5e3ab; color: #173e35;
+}
+.decorative-panel .lb:focus-visible, .admin-menu .tab:focus-visible { outline: 3px solid #f4d987; outline-offset: 3px; }
+.app-header.decorative-panel nav { flex-wrap: wrap; gap: 8px; }
+.app-header.decorative-panel .header-actions { flex-wrap: wrap; }
+.admin-menu { padding: 14px; gap: 10px; margin-bottom: 20px; }
+.islamic-events-page { margin-top: 24px; }
+.islamic-events-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 26px; }
+.islamic-events-heading { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.islamic-events-heading h1 { margin: 0; color: #fff; font-size: clamp(22px, 3vw, 30px); }
+.islamic-events-heading p { margin: 8px 0 0; color: #dcece6; }
+.islamic-events-icon { color: #efd38d; flex: 0 0 auto; }
+.hijri-year-picker { display: grid; gap: 6px; color: #f6e9bf; min-width: 180px; margin: 0; }
+.hijri-year-picker select { background: #fffdf5; color: #163e39; border: 1px solid #d7be7c; border-radius: 10px; min-height: 44px; padding: 8px 12px; font-size: 16px; margin: 0; }
+.islamic-events-content { margin-top: 18px; padding: 24px; }
+.observance-legend { display: flex; flex-wrap: wrap; gap: 10px; }
+.observance-legend span { padding: 6px 10px; border-radius: 8px; border: 1px solid currentColor; font-size: 12px; font-weight: 700; }
+.observance-table { table-layout: fixed; width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-top: 16px; }
+.observance-table th { text-align: left; background: var(--secondary); color: var(--primary); padding: 14px 12px; }
+.observance-table th:first-child { width: 46%; }
+.observance-table th:nth-child(2) { width: 27%; }
+.observance-table td { vertical-align: top; padding: 16px 12px; background: var(--card); border-block: 1px solid var(--border); overflow-wrap: anywhere; }
+.observance-table td:first-child { border-left: 4px solid var(--observance-color); border-radius: 10px 0 0 10px; }
+.observance-table td:last-child { border-right: 1px solid var(--border); border-radius: 0 10px 10px 0; }
+.happy { --observance-color: #18794e; --observance-soft: #eaf7ef; }
+.sad { --observance-color: #c8342c; --observance-soft: #fff0ef; }
+.occasion { --observance-color: #2563eb; --observance-soft: #eff6ff; }
+.observance-legend span, .observance-date { color: var(--observance-color); background: var(--observance-soft); }
+.observance-date { display: inline-block; padding: 6px 8px; border-radius: 8px; font-weight: 600; }
+.observance-title { display: flex; align-items: flex-start; flex-direction: column; gap: 8px; }
+.observance-category { font-size: 12px; color: var(--observance-color); font-weight: 700; }
+.observance-editor { display: grid; gap: 8px; min-width: 0; }
+.observance-editor label { margin: 0; font-size: 12px; }
+.observance-editor input, .observance-editor select { width: 100%; min-width: 0; margin: 4px 0 0; font-size: 16px; }
+.observance-edit-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.observance-notice { background: #eaf7ef; color: #18794e; padding: 12px; border-radius: 8px; }
+.observance-add-form { margin-top: 16px; padding: 20px; background: var(--secondary); border: 1px solid var(--border); border-radius: 12px; }
+.observance-add-form h2 { margin-top: 0; font-size: 20px; }
+.observance-add-fields { display: grid; grid-template-columns: 2fr .7fr 1.2fr 1fr; gap: 12px; }
+.observance-add-fields label { min-width: 0; margin: 0; }
+.observance-add-fields input, .observance-add-fields select { display: block; width: 100%; margin-top: 6px; min-height: 44px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; }
+.observance-filter-panel { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; margin-bottom: 16px; }
+.observance-filter-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.observance-month-picker { display: grid; gap: 6px; margin: 0; min-width: 180px; color: #f6e9bf; }
+.observance-month-picker select { border: 1px solid #d7be7c; border-radius: 10px; min-height: 44px; padding: 8px 12px; background: #fffdf5; color: #163e39; font-size: 16px; margin: 0; }
+@media (max-width: 900px) {
+  .app-header.decorative-panel nav { order: 3; width: 100%; margin: 0; }
+  .app-header.decorative-panel nav .lb { flex: 1 1 auto; }
+  .islamic-events-hero { flex-wrap: wrap; }
+  .observance-add-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 550px) {
+  .app-header.decorative-panel nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .app-header.decorative-panel nav .lb { font-size: 12px; padding: 10px 6px; white-space: normal; }
+  .app-header.decorative-panel .header-actions > .lb { font-size: 12px; min-height: 44px; }
+  .islamic-events-hero { padding: 20px 16px; gap: 18px; }
+  .islamic-events-heading { gap: 10px; }
+  .hijri-year-picker { width: 100%; }
+  .islamic-events-content { padding: 16px 8px; }
+  .observance-table th, .observance-table td { padding: 10px 6px; font-size: 11px; }
+  .observance-table th:first-child { width: 38%; }
+  .observance-table th:nth-child(2) { width: 31%; }
+  .observance-date { padding: 4px; }
+  .observance-editor label { font-size: 11px; }
+  .observance-edit-actions .lb { padding: 8px 6px; font-size: 11px; min-height: 40px; height: auto; }
+  .observance-edit-actions .lb svg { width: 13px; }
+  .observance-add-fields { grid-template-columns: minmax(0, 1fr); }
+  .observance-add-form { padding: 16px 12px; }
+  .observance-filter-buttons { width: 100%; }
+  .observance-filter-buttons .lb { flex: 1 1 auto; padding: 10px 8px; font-size: 12px; }
+  .observance-month-picker { width: 100%; }
+}
