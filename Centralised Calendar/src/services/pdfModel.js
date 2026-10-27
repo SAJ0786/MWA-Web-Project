@@ -108,6 +108,7 @@ export function buildPdfModel({ events, basis, year, month, hYear, hMonth, overr
           title: e.title || 'Untitled',
           detail: `[${to12h(timeKeyInOrgTz(e.startAt))} – ${to12h(timeKeyInOrgTz(e.endAt))}${venue ? ` · ${venue}` : ''}]`,
           department: e.departmentName || '',
+          departmentId: e.departmentId || null,
           pending: e.status === 'pending'
         };
       })

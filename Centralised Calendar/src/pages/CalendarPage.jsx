@@ -1,3 +1,4 @@
+import {bookingTypeStyle,bookingTypeEdge} from '@mwa/appearance';
 import { withLiveConflicts } from '../utils/conflictUtils.js';
 import { useEffect, useMemo, useState } from 'react';
 import { HIJRI_MONTHS } from '../services/hijriService.js';
@@ -136,7 +137,7 @@ export default function CalendarPage({ events: rawEvents, venues, departments, i
     setPrimary(next);
   }
 
-  const deptColor = (deptId) => departments.find(d => d.id === deptId)?.colorHex || '#2f6b4f';
+  const deptColor = (deptId) => bookingTypeEdge(departments.find(d => d.id === deptId));
   const makeCell = (key) => ({ key, date: keyToDate(key), hijri: getHijriParts(key, hijriOverrides), inMonth: true });
   const weekStart = mondayOf(selectedKey);
   const cells = view === 'week' ? Array.from({ length: 7 }, (_, i) => makeCell(addDaysKey(weekStart, i))) : grid.cells;
@@ -162,9 +163,10 @@ export default function CalendarPage({ events: rawEvents, venues, departments, i
   const pendingConflicts = isAdmin ? pendingAll.filter(e => e.hasConflict).length : 0;
   const venueOpen = (v) => `${v.name}`;
 
+  const eventStyle = e => {if(e.masked)return undefined;const style=bookingTypeStyle(departments.find(d=>d.id===e.departmentId));if(e.status==='pending'){delete style.background;delete style.color}return style};
   const eventPill = (e) => (
     <button key={e.id} type="button" className={`ev ${e.status === 'pending' ? 'pend' : ''} ${e.masked && e.status !== 'pending' ? 'priv' : ''} ${e.hasConflict ? 'conflict' : ''}`}
-      style={e.masked ? undefined : { background: deptColor(e.departmentId) }}
+      style={eventStyle(e)}
       title={`${e.title} · ${e.venueName || e.venueId}${e.hasConflict ? ' · overlaps another booking' : ''}`}
       onClick={(ev) => { ev.stopPropagation(); setSelectedKey(dateKeyInOrgTz(e.startAt)); setModal({ editing: e }); }}>
       {e.dateBasis === 'hijri' ? '☾ ' : ''}{timeKeyInOrgTz(e.startAt)} {e.title}
@@ -237,11 +239,7 @@ export default function CalendarPage({ events: rawEvents, venues, departments, i
             <div className="dept-chips">
               {departments.map(d => (
                 <button key={d.id} type="button" className="chip" onClick={() => toggleDept(d.id)}
-                  style={{
-                    borderColor: d.colorHex,
-                    background: deptFilter.has(d.id) ? d.colorHex : 'transparent',
-                    color: deptFilter.has(d.id) ? '#fff' : d.colorHex
-                  }}>{d.name}</button>
+                  style={bookingTypeStyle(d,deptFilter.has(d.id))} aria-pressed={deptFilter.has(d.id)}>{d.name}</button>
               ))}
             </div>
           )}

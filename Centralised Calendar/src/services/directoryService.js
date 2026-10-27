@@ -41,6 +41,7 @@ export async function createDepartment(data) {
   return addDoc(collection(db, 'departments'), {
     name: data.name,
     colorHex: data.colorHex || '#2563eb',
+    paletteTone: Number.isInteger(data.paletteTone) && data.paletteTone >= 0 && data.paletteTone < 6 ? data.paletteTone : 5,
     approvalRequired: data.approvalRequired !== false,
     active: data.active !== false
   });

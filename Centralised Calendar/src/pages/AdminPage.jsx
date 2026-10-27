@@ -1,3 +1,5 @@
+import {bookingToneIndex,bookingTypeStyle} from '@mwa/appearance';
+import PaletteShadePicker from '../components/PaletteShadePicker.jsx';
 import { useEffect, useState } from 'react';
 import { useAuth, OWNER_EMAIL } from '../contexts/AuthContext.jsx';
 import { watchAuditLog } from '../services/auditService.js';
@@ -412,38 +414,39 @@ function resolveVenueBufferHours(v) {
 }
 
 function DepartmentsTab({ departments }) {
-  const [form, setForm] = useState({ name: '', colorHex: '#2563eb' });
+  const [form, setForm] = useState({ name: '', paletteTone: departments.length % 6 });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(null);
   async function add(e) {
     e.preventDefault();
     if (!form.name) return;
     await createDepartment(form);
-    setForm({ name: '', colorHex: '#2563eb' });
+    setForm({ name: '', paletteTone: departments.length % 6 });
   }
   function startEdit(d) {
     setEditingId(d.id);
-    setEditForm({ name: d.name || '', colorHex: d.colorHex || '#2563eb' });
+    setEditForm({ name: d.name || '', paletteTone: bookingToneIndex(d) });
   }
   function cancelEdit() { setEditingId(null); setEditForm(null); }
   async function saveEdit(id) {
-    await updateDepartment(id, { name: editForm.name, colorHex: editForm.colorHex });
+    await updateDepartment(id, { name: editForm.name, paletteTone: editForm.paletteTone });
     cancelEdit();
   }
   return (
     <div>
+      <p className="muted">Booking-type shades follow the selected website palette. Choose a shade for each type; its colour adapts when the palette changes.</p>
       <form className="card" onSubmit={add} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div><label>Name</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
-        <div><label>Colour</label><input type="color" value={form.colorHex} onChange={e => setForm(f => ({ ...f, colorHex: e.target.value }))} /></div>
+        <PaletteShadePicker value={form.paletteTone} onChange={paletteTone=>setForm(f=>({...f,paletteTone}))}/>
         <button className="btn pri" type="submit">Add booking type</button>
       </form>
       <table>
-        <thead><tr><th>Name</th><th>Colour</th><th>Active</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Palette shade</th><th>Active</th><th></th></tr></thead>
         <tbody>
           {departments.map(d => editingId === d.id ? (
             <tr key={d.id}>
               <td><input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></td>
-              <td><input type="color" value={editForm.colorHex} onChange={e => setEditForm(f => ({ ...f, colorHex: e.target.value }))} /></td>
+              <td><PaletteShadePicker compact value={editForm.paletteTone} onChange={paletteTone=>setEditForm(f=>({...f,paletteTone}))}/></td>
               <td><input type="checkbox" checked={d.active !== false} onChange={e => updateDepartment(d.id, { active: e.target.checked })} /></td>
               <td style={{ display: 'flex', gap: 6 }}>
                 <button className="btn pri" type="button" onClick={() => saveEdit(d.id)}>Save</button>
@@ -453,7 +456,7 @@ function DepartmentsTab({ departments }) {
           ) : (
             <tr key={d.id}>
               <td>{d.name}</td>
-              <td><span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 4, background: d.colorHex }} /></td>
+              <td><span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 4, ...bookingTypeStyle(d) }} /></td>
               <td><input type="checkbox" checked={d.active !== false} onChange={e => updateDepartment(d.id, { active: e.target.checked })} /></td>
               <td style={{ display: 'flex', gap: 6 }}>
                 <button className="btn" type="button" onClick={() => startEdit(d)}>Edit</button>

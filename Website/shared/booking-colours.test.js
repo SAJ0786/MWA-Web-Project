@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {schemes} from './palettes.js';
+import {bookingTonePalette,bookingToneIndex,bookingTypeStyle,contrastRatio} from './booking-colours.js';
+test('all booking shades meet text contrast in every light and dark palette',()=>{for(const scheme of Object.values(schemes))for(const mode of ['light','dark']){const tones=scheme[mode];const shades=bookingTonePalette(tones.primary,tones.ink,tones.paper,mode);assert.equal(shades.length,6);assert.equal(new Set(shades.map(s=>s.background)).size,6);for(const shade of shades)assert.ok(contrastRatio(shade.background,shade.foreground)>=4.5)}});
+test('existing types receive distinct subdued defaults without changing stored colours',()=>{const types=['Events Booking','MWA Programs','Maintenance','Private Internal Bookings','Volunteers Events'].map(name=>({name,colorHex:'#ff00ff'}));assert.equal(new Set(types.map(bookingToneIndex)).size,5);assert.equal(bookingTypeIndexSafe(),true);function bookingTypeIndexSafe(){return types.every(d=>!Object.values(bookingTypeStyle(d)).includes('#ff00ff'))}});
+test('saved shade choices survive palette changes and invalid choices fall back safely',()=>{assert.equal(bookingToneIndex({name:'MWA Programs',paletteTone:4}),4);assert.equal(bookingToneIndex({name:'MWA Programs',paletteTone:99}),1);assert.equal(bookingToneIndex({name:'New type'}),5);assert.equal(bookingTypeStyle({paletteTone:3},false).background,'transparent')});

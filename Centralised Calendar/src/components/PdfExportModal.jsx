@@ -1,3 +1,4 @@
+import {bookingTypeStyle} from '@mwa/appearance';
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { buildPdfModel, buildYearPdfModel, GREGORIAN_MONTH_NAMES, PDF_HIJRI_MONTH_OPTIONS } from '../services/pdfModel.js';
@@ -18,6 +19,7 @@ export default function PdfExportModal({ events, venues, departments, isAdmin, o
   const [includePending, setIncludePending] = useState(false);
   const [publicOnly, setPublicOnly] = useState(true);
   const [template, setTemplate] = useState('classic');
+  const [paperSize,setPaperSize]=useState('a4');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -56,13 +58,13 @@ export default function PdfExportModal({ events, venues, departments, isAdmin, o
     try {
       if (isYear) {
         const { renderYearCalendarPdf, yearPdfFilename } = await import('../services/pdfYearCalendar.js');
-        await renderYearCalendarPdf(model, yearPdfFilename(model));
+        await renderYearCalendarPdf(model, yearPdfFilename(model), {template,paperSize,departments});
         onClose();
         return;
       }
       const { renderCalendarPdf, pdfFilename } = await import('../services/pdfCalendar.js');
       const noteLines = isAdmin ? notes.split(/\r?\n/).map(s => s.replace(/^\s*\*\s*/, '').trim()).filter(Boolean) : [];
-      await renderCalendarPdf(model, pdfFilename(model), { template: isAdmin ? template : 'classic', notes: noteLines });
+      await renderCalendarPdf(model, pdfFilename(model), { template: isAdmin ? template : 'classic', notes: noteLines, paperSize,departments });
       onClose();
     } catch (e) {
       setErr(`Couldn't create the PDF: ${e.message || e}`);
@@ -96,7 +98,7 @@ export default function PdfExportModal({ events, venues, departments, isAdmin, o
           <p className="muted" style={{ marginTop: 10 }}>
             {basis === 'gregorian'
               ? `January – December ${gYear}${model?.subtitle ? ` (${model.subtitle})` : ''}`
-              : `Muharram – Dhul Hijjah ${hYear}${model?.subtitle ? ` (${model.subtitle})` : ''}`}: one page with confirmed {PUBLIC_DEPARTMENT_NAME} at all venues highlighted.
+              : `Muharram – Dhul Hijjah ${hYear}${model?.subtitle ? ` (${model.subtitle})` : ''}`}: an annual overview with confirmed {PUBLIC_DEPARTMENT_NAME} at all venues highlighted. Extra programme pages are added only when needed.
           </p>
         </>)}
 
@@ -131,7 +133,7 @@ export default function PdfExportModal({ events, venues, departments, isAdmin, o
         <div className="dept-chips" style={{ margin: '4px 0 8px' }}>
           {departments.map(d => (
             <button key={d.id} type="button" className="chip" onClick={() => toggleDept(d.id)}
-              style={{ borderColor: d.colorHex, background: deptIds.has(d.id) ? d.colorHex : 'transparent', color: deptIds.has(d.id) ? '#fff' : d.colorHex }}>{d.name}</button>
+              style={bookingTypeStyle(d,deptIds.has(d.id))}>{d.name}</button>
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -175,6 +177,9 @@ export default function PdfExportModal({ events, venues, departments, isAdmin, o
         </p>
         </>)}
         {isYear && model && <p className="muted">{model.eventCount} program(s) highlighted across 12 months.</p>}
+        {isAdmin && isYear && <><label>PDF template</label><div className="segmented" role="group" aria-label="PDF template">{[['classic','Classic'],['decorative','Decorative']].map(([key,label])=><button key={key} type="button" aria-pressed={template===key} onClick={()=>setTemplate(key)}>{label}</button>)}</div></>}
+        <label htmlFor="pdf-paper-size">Paper size</label><select id="pdf-paper-size" value={paperSize} onChange={e=>setPaperSize(e.target.value)}><option value="a4">A4 - standard</option><option value="a3">A3 - larger print</option></select>
+        <p className="muted">Uses the website logo and your selected colour palette on a light background for printing.</p>
         {err && <div className="err" role="alert">{err}</div>}
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button type="button" className="btn pri" disabled={busy || !model} onClick={download}>{busy ? 'Creating PDF…' : 'Download PDF'}</button>
