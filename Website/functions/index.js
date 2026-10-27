@@ -1,0 +1,28 @@
+const {initializeApp}=require('firebase-admin/app');
+const {getFirestore}=require('firebase-admin/firestore');
+const {getAuth}=require('firebase-admin/auth');
+const {onRequest}=require('firebase-functions/v2/https');
+const {validateContent}=require('./validateContent');
+const model=require('./content-model.json');
+const {sessionAllowed}=require('./adminAccess');
+initializeApp();const db=getFirestore();
+const origins=new Set(['https://mwa-community-web.web.app','https://mwa-community-web.firebaseapp.com','http://127.0.0.1:5174','http://localhost:5174']);
+async function editorFor(req){try{const match=/^Bearer (.+)$/.exec(req.get('Authorization')||'');if(!match)return null;const token=await getAuth().verifyIdToken(match[1],true);const user=await db.doc('users/'+token.uid).get();if(!user.exists||user.data().role!=='admin')return null;const auth=await db.doc('calendarSettings/auth').get();if(!sessionAllowed({provider:token.firebase?.sign_in_provider||'',passwordLoginDisabled:auth.exists&&auth.data().passwordLoginDisabled===true}))return null;return token}catch{return null}}
+exports.websiteCmsApi=onRequest({region:'australia-southeast1',maxInstances:3},async(req,res)=>{
+ res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');
+ const origin=req.get('Origin');if(origin&&origins.has(origin)){res.set('Access-Control-Allow-Origin',origin);res.set('Vary','Origin');res.set('Access-Control-Allow-Headers','Authorization, Content-Type');res.set('Access-Control-Allow-Methods','GET, PUT, OPTIONS')}
+ if(req.method==='OPTIONS')return res.status(origin&&origins.has(origin)?204:403).end();
+ try{
+  const ref=db.doc('websiteContent/main');
+  if(req.method==='GET'){const snapshot=await ref.get();const record=snapshot.exists?snapshot.data():null;const stored=record?.document||model.defaults;const document={...model.defaults,...stored,content:{...model.defaults.content,...stored.content}};return res.json({document,revision:record?.revision||0,updatedAt:record?.updatedAt||null,canEdit:!!await editorFor(req)})}
+  if(req.method!=='PUT')return res.status(405).json({error:'Method not allowed.'});
+  if(!origin||!origins.has(origin))return res.status(403).json({error:'Request origin is not allowed.'});
+  const editor=await editorFor(req);if(!editor)return res.status(401).json({error:'Sign in with an approved MWA admin account.'});
+  if(!req.is('application/json'))return res.status(415).json({error:'Use a JSON content document.'});
+  const input=req.body;if(!input||!Number.isSafeInteger(input.revision)||input.revision<0)return res.status(400).json({error:'A valid content revision is required.'});
+  const document=validateContent(input.document);if(!document)return res.status(400).json({error:'Check the content fields, logo and colour settings.'});
+  const timestamp=new Date().toISOString();let revision;
+  try{revision=await db.runTransaction(async transaction=>{const current=await transaction.get(ref);const existing=current.exists?current.data().revision:0;if(existing!==input.revision)throw Object.assign(new Error('revision-conflict'),{conflict:true});const next=existing+1;transaction.set(ref,{document,revision:next,updatedAt:timestamp,updatedBy:editor.uid});transaction.set(db.doc('calendarSettings/websiteAppearance'),{palette:document.palette,mode:document.mode,customPrimary:document.customPrimary,useCustomPrimary:document.useCustomPrimary,logo:document.logo,websiteUrl:'https://mwa-community-web.web.app',revision:next,updatedAt:timestamp});return next})}catch(error){if(error.conflict)return res.status(409).json({error:'Newer content has been published. Export your draft and reload before publishing.'});throw error}
+  return res.json({revision,updatedAt:timestamp});
+ }catch{return res.status(503).json({error:'The website content store is unavailable. Your changes have not been published.'})}
+});

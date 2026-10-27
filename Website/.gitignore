@@ -1,0 +1,14 @@
+node_modules/
+functions/node_modules/
+.env*
+calendar-app/.env*
+dist/
+calendar-dist/
+.firebase/
+firebase-debug.log*
+calendar-app/node_modules/
+calendar-app/dist/
+
+!.env.example
+shared/firebase-config.json
+migration-record.json
