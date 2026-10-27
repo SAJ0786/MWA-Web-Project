@@ -13,6 +13,7 @@ export function mountCalendarShell() {
  frame.title = islamic?'MWA Key Islamic Events':'MWA Events & Bookings Calendar';
  const query=new URLSearchParams(location.search);
  if(islamic)query.set('view','islamic-events');
+ query.set('release', __MWA_BUILD_ID__);
  frame.src = '/calendar-app/' + (query.size?'?'+query.toString():'') + location.hash;
  main.append(frame);
  document.querySelector('#main').after(main);
