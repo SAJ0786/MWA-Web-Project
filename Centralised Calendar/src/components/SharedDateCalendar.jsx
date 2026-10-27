@@ -17,9 +17,9 @@ export default function SharedDateCalendar({overrides=[],events=[],reference=fal
   const programmes=useMemo(()=>reference?[]:publicProgrammes(events),[reference,events]);
   const inMonth=new Set(grid.cells.filter(c=>c.inMonth).map(c=>c.key));
   const shown=programmes.filter(e=>selected?dateKeyInOrgTz(e.startAt)===selected:inMonth.has(dateKeyInOrgTz(e.startAt)));
-  function goToday(){const cursor=current();setG(cursor);setH(gregorianCursorToHijri(cursor.year,cursor.month,overrides));setSelected(null);}
+  function goToday(){const cursor=current();const currentHijri=getHijriParts(dateKeyInOrgTz(new Date().toISOString()),overrides);setG(cursor);setH({hYear:currentHijri.year,hMonth:currentHijri.month});setSelected(null);}
   useEffect(()=>{window.addEventListener('mwa-calendar-today',goToday);return()=>window.removeEventListener('mwa-calendar-today',goToday);},[overrides]);
-  function toggle(next){if(next===basis)return;if(next==='hijri')setH(gregorianCursorToHijri(g.year,g.month,overrides));else setG(hijriCursorToGregorian(h.hYear,h.hMonth,overrides));setBasis(next);setSelected(null);}
+  function toggle(next){if(next===basis)return;if(next==='hijri'){const anchor=selected||(Number(today.slice(0,4))===g.year&&Number(today.slice(5,7))===g.month+1?today:`${g.year}-${String(g.month+1).padStart(2,'0')}-01`);const date=getHijriParts(anchor,overrides);setH({hYear:date.year,hMonth:date.month});}else if(selected){const [year,month]=selected.split('-').map(Number);setG({year,month:month-1});}else setG(hijriCursorToGregorian(h.hYear,h.hMonth,overrides));setBasis(next);setSelected(null);}
   function shift(n){basis==='gregorian'?setG(c=>shiftGregorianCursor(c,n)):setH(c=>shiftHijriCursor(c,n));setSelected(null);}
   const hText=key=>{const p=getHijriParts(key,overrides);return p.year?`${p.day} ${HIJRI_MONTHS.find(m=>m.value===p.month)?.name || ''} ${p.year} AH`:'';};
   const dateLabel=key=>new Intl.DateTimeFormat('en-AU',{dateStyle:'medium',timeZone:'Australia/Sydney'}).format(new Date(key+'T12:00:00+11:00'));
