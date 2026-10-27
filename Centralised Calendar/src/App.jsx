@@ -1,9 +1,11 @@
+import {CalendarManagement,ToolsAutomation} from './pages/ModulePages.jsx';
+import {recordActivity} from './services/auditService.js';
 import { useEffect, useState } from 'react';
 import { useAuth } from './contexts/AuthContext.jsx';
 import { firebaseConfigured } from './firebase/firebase.js';
 import { watchVenues, watchDepartments } from './services/directoryService.js';
 import { watchAllEvents, fetchPublicEvents } from './services/eventsService.js';
-import { getHijriSettings } from './services/calendarSettingsService.js';
+import { getHijriSettings,watchHijriSettings } from './services/calendarSettingsService.js';
 import { dateKeyInOrgTz } from './utils/dateUtils.js';
 import Header from './components/Header.jsx';
 import CalendarPage from './pages/CalendarPage.jsx';
@@ -14,7 +16,9 @@ import IslamicEventsPage from './pages/IslamicEventsPage.jsx';
 
 export default function App() {
   const { isAdmin } = useAuth();
-  const [tab, setTab] = useState('calendar');
+  const entryView=new URLSearchParams(window.location.search).get('view');
+  const moduleView=['calendar-management','tools'].includes(entryView);
+  const [tab, setTab] = useState(()=>['calendar-management','tools','islamic-events'].includes(entryView)?entryView:'calendar');
   const [venues, setVenues] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [events, setEvents] = useState([]);
@@ -39,20 +43,23 @@ export default function App() {
 
   useEffect(() => {
     if (!firebaseConfigured) return;
-    getHijriSettings().then(s => setHijriOverrides(s.overrides || []));
+    return watchHijriSettings(s => setHijriOverrides(s.overrides || []),()=>{});
   }, []);
 
   // Admin: realtime full collection. Public: fetch sanitized events via a
   // Cloud Function (no direct Firestore access) and refetch on demand.
   useEffect(() => {
     if (!firebaseConfigured) return undefined;
+    if (moduleView) return undefined;
     if (isAdmin) {
       return watchAllEvents(setEvents, () => setEvents([]));
     }
     let cancelled = false;
     fetchPublicEvents().then(list => { if (!cancelled) setEvents(list); }).catch(() => setEvents([]));
     return () => { cancelled = true; };
-  }, [isAdmin, publicLoadTick]);
+  }, [isAdmin, publicLoadTick,moduleView]);
+
+  useEffect(()=>{if(isAdmin)recordActivity(tab==='tools'?'tools-automation':tab==='calendar-management'?'calendar-management':tab==='islamic-events'?'islamic-events':'events-bookings','module.opened',tab);},[tab,isAdmin]);
 
   const reloadPublic = () => setPublicLoadTick(t => t + 1);
 
@@ -74,6 +81,8 @@ export default function App() {
       <div className="app-container">
         <Header tab={tab} setTab={setTab} onNewBooking={() => setNewBooking({ date: null })} />
         <main>
+          {tab === 'calendar-management' && <CalendarManagement hijriOverrides={hijriOverrides} onReloadSettings={()=>getHijriSettings().then(s=>setHijriOverrides(s.overrides||[]))}/>}
+          {tab === 'tools' && <ToolsAutomation/>}
           {tab === 'islamic-events' && <IslamicEventsPage hijriOverrides={hijriOverrides} />}
           {tab === 'calendar' && (
             <CalendarPage events={events} venues={venues} departments={departments}

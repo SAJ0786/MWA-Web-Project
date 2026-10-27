@@ -1,0 +1,23 @@
+import {useState} from 'react';
+import {Users,ScrollText,CalendarRange,MoonStar,ArrowUpRight} from 'lucide-react';
+import {useAuth} from '../contexts/AuthContext.jsx';
+import TeamTab from '../components/AdminTeam.jsx';
+import HijriTab from '../components/HijriSettings.jsx';
+import AuditLog from '../components/AuditLog.jsx';
+import SharedDateCalendar from '../components/SharedDateCalendar.jsx';
+
+export function ModuleGate({name,children}) {
+  const {isAdmin,loading,syncing}=useAuth();
+  if(loading||syncing)return <section className="module-intro"><p>Checking your admin session…</p></section>;
+  if(!isAdmin)return <section className="module-intro"><h1>{name}</h1><p>Sign in with your MWA admin account to open this module.</p><a className="lb lb-default" href={'/admin-login?returnTo='+encodeURIComponent(location.pathname.includes('calendar-app')?(name==='Calendar Management'?'/calendar-management/':'/tools-automation/'):location.pathname)} target="_top">Admin Login</a></section>;
+  return children;
+}
+function Intro({Icon,name,children}) {return <div className="module-intro"><div className="section-eyebrow"><Icon size={18}/> MWA Administration</div><div className="module-title-line"><h1>{name}</h1><a className="lb lb-outline lb-sm" href="/admin-login" target="_top">Admin Console <ArrowUpRight size={15}/></a></div><p>{children}</p></div>;}
+export function CalendarManagement({hijriOverrides,onReloadSettings}) {
+  const {user}=useAuth();
+  return <ModuleGate name="Calendar Management"><Intro Icon={CalendarRange} name="Calendar Management">One shared calendar and one source for Hijri dates across MWA.</Intro><SharedDateCalendar reference overrides={hijriOverrides}/><section className="page-panel glass-panel hijri-settings-section"><h2><MoonStar size={22}/> Monthly Hijri settings</h2><HijriTab adjustedBy={user?.email} hijriOverrides={hijriOverrides} onReloadSettings={onReloadSettings}/></section></ModuleGate>;
+}
+export function ToolsAutomation() {
+  const {user,profile,isOwner}=useAuth();const [tab,setTab]=useState('audit');
+  return <ModuleGate name="Tools & Automation"><Intro Icon={ScrollText} name="Tools & Automation">Manage the admin team and review activity across MWA’s live modules.</Intro><section className="page-panel glass-panel"><div className="bar admin-menu" role="group" aria-label="Tools sections">{[['audit','Audit log',ScrollText],['team','Admin team',Users]].map(([id,label,Icon])=><button key={id} className={'tab '+(tab===id?'on':'')} aria-pressed={tab===id} onClick={()=>setTab(id)}><Icon size={16}/>{label}</button>)}</div>{tab==='team'?<TeamTab currentEmail={(user?.email||profile?.email||'').toLowerCase()} canManage={isOwner}/>:<AuditLog/>}</section></ModuleGate>;
+}

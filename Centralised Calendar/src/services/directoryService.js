@@ -1,8 +1,8 @@
 import {
-  collection, doc, onSnapshot, orderBy, query,
-  addDoc, updateDoc, deleteDoc
+  collection, onSnapshot, orderBy, query
 } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
+import {httpsCallable} from 'firebase/functions';
+import { db,functions } from '../firebase/firebase';
 
 export function watchVenues(callback) {
   const q = query(collection(db, 'venues'), orderBy('name'));
@@ -19,7 +19,7 @@ export function watchDepartments(callback) {
 }
 
 export async function createVenue(data) {
-  return addDoc(collection(db, 'venues'), {
+  return change('venues','create',null, {
     name: data.name,
     capacity: Number(data.capacity) || null,
     hireable: data.hireable !== false,
@@ -30,15 +30,15 @@ export async function createVenue(data) {
 }
 
 export async function updateVenue(id, data) {
-  return updateDoc(doc(db, 'venues', id), data);
+  return change('venues','update',id,data);
 }
 
 export async function deleteVenue(id) {
-  return deleteDoc(doc(db, 'venues', id));
+  return change('venues','delete',id);
 }
 
 export async function createDepartment(data) {
-  return addDoc(collection(db, 'departments'), {
+  return change('departments','create',null, {
     name: data.name,
     colorHex: data.colorHex || '#2563eb',
     paletteTone: Number.isInteger(data.paletteTone) && data.paletteTone >= 0 && data.paletteTone < 6 ? data.paletteTone : 5,
@@ -48,9 +48,11 @@ export async function createDepartment(data) {
 }
 
 export async function updateDepartment(id, data) {
-  return updateDoc(doc(db, 'departments', id), data);
+  return change('departments','update',id,data);
 }
 
 export async function deleteDepartment(id) {
-  return deleteDoc(doc(db, 'departments', id));
+  return change('departments','delete',id);
 }
+
+async function change(kind,operation,id,data){return (await httpsCallable(functions,'changeDirectory')({kind,operation,id,data:data||null})).data;}

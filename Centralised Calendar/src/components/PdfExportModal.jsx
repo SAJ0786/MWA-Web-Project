@@ -1,3 +1,4 @@
+import {recordActivity} from '../services/auditService.js';
 import {bookingTypeStyle} from '@mwa/appearance';
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -59,12 +60,14 @@ export default function PdfExportModal({ events, venues, departments, isAdmin, o
       if (isYear) {
         const { renderYearCalendarPdf, yearPdfFilename } = await import('../services/pdfYearCalendar.js');
         await renderYearCalendarPdf(model, yearPdfFilename(model), {template,paperSize,departments});
+        if(isAdmin)recordActivity('events-bookings','calendar.exported',`annual-${basis}-${template}-${paperSize}`);
         onClose();
         return;
       }
       const { renderCalendarPdf, pdfFilename } = await import('../services/pdfCalendar.js');
       const noteLines = isAdmin ? notes.split(/\r?\n/).map(s => s.replace(/^\s*\*\s*/, '').trim()).filter(Boolean) : [];
       await renderCalendarPdf(model, pdfFilename(model), { template: isAdmin ? template : 'classic', notes: noteLines, paperSize,departments });
+      if(isAdmin)recordActivity('events-bookings','calendar.exported',`monthly-${basis}-${template}-${paperSize}`);
       onClose();
     } catch (e) {
       setErr(`Couldn't create the PDF: ${e.message || e}`);

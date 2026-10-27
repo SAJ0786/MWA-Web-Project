@@ -189,13 +189,8 @@ async function commitInChunks(writes, size = 400) {
   }
 }
 
-async function writeAudit({ entityType, entityId, action, userId, userEmail, note, diff }) {
-  await db.collection('auditLog').add({
-    entityType, entityId, action,
-    userId: userId || null, userEmail: userEmail || null,
-    note: note || '', diff: diff || null,
-    timestamp: new Date().toISOString()
-  });
+async function writeAudit(entry) {
+  await db.collection('auditLog').add(require('./auditModel').auditEntry(entry));
 }
 
 async function getHijriOverrides() {
@@ -1191,3 +1186,6 @@ exports.sendPendingDigest = onSchedule({ schedule: '0 8 * * *', timeZone: 'Austr
 exports.onVenueChanged = onDocumentWritten({ document: 'venues/{venueId}', region: 'australia-southeast1' }, async () => {
   await recomputeVenueConflicts();
 });
+
+// Shared administration endpoints: permissions and audit identity are verified server-side.
+Object.assign(exports,require('./auditedAdmin').register({db,onCall,HttpsError,requireAdmin,FieldValue}));

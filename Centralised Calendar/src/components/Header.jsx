@@ -9,7 +9,7 @@ export default function Header({ tab, setTab, onNewBooking }) {
   const { user, isAdmin, logout } = useAuth();
   const embedded=window.self!==window.top;
   const [brandLogo,setBrandLogo]=useState(defaults.logo||logoUrl);
-  if(embedded && new URLSearchParams(window.location.search).get('view')==='islamic-events')return <div hidden><AppearanceControl/></div>;
+  if(['calendar-management','tools'].includes(tab) || (embedded && new URLSearchParams(window.location.search).get('view')==='islamic-events'))return <div hidden><AppearanceControl/></div>;
   const navBtn = (id, label, Icon) => (
     <button type="button" className={`lb lb-nav ${tab === id ? 'nav-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}><Icon />{label}</button>
   );

@@ -1,51 +1,9 @@
-// Calendar settings service — stores the admin-controlled Hijri moon-sighting
-// adjustment used by hijriService.js. Mirrors the data shape used by the
-// Community Events App (settings/hijriCalendar) so the two stay compatible:
-//   overrides: [{ hYear, hMonth, gDate }]  — per-month community observations
-//   adjustmentDays: number                  — legacy single offset (back-compat)
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
-
-const SETTINGS_DOC = 'hijri';
-
-export const DEFAULT_HIJRI_SETTINGS = { overrides: [], adjustmentDays: 0 };
-
-export async function getHijriSettings() {
-  try {
-    const snap = await getDoc(doc(db, 'calendarSettings', SETTINGS_DOC));
-    if (!snap.exists()) return { ...DEFAULT_HIJRI_SETTINGS };
-    const data = snap.data();
-    return {
-      overrides: data.overrides || [],
-      adjustmentDays: data.adjustmentDays ?? 0
-    };
-  } catch {
-    return { ...DEFAULT_HIJRI_SETTINGS };
-  }
-}
-
-/** Admin only (enforced by firestore.rules). Upserts a single month override. */
-export async function saveMonthOverride(hYear, hMonth, gDate, adjustedBy) {
-  const current = await getHijriSettings();
-  const overrides = [
-    ...(current.overrides || []).filter(
-      o => !(Number(o.hYear) === Number(hYear) && Number(o.hMonth) === Number(hMonth))
-    ),
-    { hYear: Number(hYear), hMonth: Number(hMonth), gDate }
-  ];
-  await setDoc(
-    doc(db, 'calendarSettings', SETTINGS_DOC),
-    { overrides, adjustedBy: adjustedBy || null, updatedAt: new Date().toISOString() },
-    { merge: true }
-  );
-  return overrides;
-}
-
-export async function removeMonthOverride(hYear, hMonth) {
-  const current = await getHijriSettings();
-  const overrides = (current.overrides || []).filter(
-    o => !(Number(o.hYear) === Number(hYear) && Number(o.hMonth) === Number(hMonth))
-  );
-  await setDoc(doc(db, 'calendarSettings', SETTINGS_DOC), { overrides }, { merge: true });
-  return overrides;
-}
+import {doc,getDoc,onSnapshot} from 'firebase/firestore';
+import {httpsCallable} from 'firebase/functions';
+import {db,functions} from '../firebase/firebase.js';
+export const DEFAULT_HIJRI_SETTINGS={overrides:[],adjustmentDays:0};
+const settings=snap=>snap.exists()?{overrides:snap.data().overrides||[],adjustmentDays:snap.data().adjustmentDays??0}:{...DEFAULT_HIJRI_SETTINGS};
+export async function getHijriSettings(){return settings(await getDoc(doc(db,'calendarSettings','hijri')));}
+export function watchHijriSettings(onData,onError){return onSnapshot(doc(db,'calendarSettings','hijri'),snap=>onData(settings(snap)),onError);}
+export async function saveMonthOverride(hYear,hMonth,gDate){return (await httpsCallable(functions,'changeHijriMonth')({hYear:Number(hYear),hMonth:Number(hMonth),gDate})).data.overrides;}
+export async function removeMonthOverride(hYear,hMonth){return (await httpsCallable(functions,'changeHijriMonth')({hYear:Number(hYear),hMonth:Number(hMonth),remove:true})).data.overrides;}

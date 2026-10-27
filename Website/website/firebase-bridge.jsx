@@ -1,3 +1,5 @@
+import {mountCommunityCalendar} from './community-calendar.jsx';
+import {recordActivity} from '@calendar/services/auditService.js';
 import React,{useState,useEffect} from 'react';
 import {createPortal} from 'react-dom';
 import {createRoot} from 'react-dom/client';
@@ -23,7 +25,7 @@ onSnapshot(doc(db,'calendarSettings','websiteAppearance'),snapshot=>{if(snapshot
 const refreshAppearance=()=>applyAppearance(siteSettings);
 window.addEventListener('storage',refreshAppearance);window.addEventListener('mwa-appearance-preferences',refreshAppearance);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',refreshAppearance);
 
-function AdminLogin(){const session=useAuth();const returnToCms=new URLSearchParams(location.search).get('returnTo')==='/cms';useEffect(()=>{if(!session.loading&&session.isAdmin&&returnToCms)location.replace('/cms')},[session.loading,session.isAdmin,returnToCms]);if(!session.loading&&session.isAdmin&&returnToCms)return <div className="admin-welcome"><p>Opening website CMS…</p></div>;if(session.loading)return <div className="admin-welcome"><p>Checking your admin session…</p></div>;if(session.isAdmin)return <AdminConsole email={session.user?.email}/>;return <div className="mwa-admin-auth"><div className="admin-auth-intro"><div className="eyebrow">ONE MWA · ONE ADMIN ACCOUNT</div><h1>Admin login.</h1><p>Use your existing MWA calendar admin account. After signing in, open the calendar workspace or manage website content.</p></div><AdminLoginCard {...session}/></div>}
+function AdminLogin(){const session=useAuth();const requestedReturn=new URLSearchParams(location.search).get('returnTo');const returnTo=['/cms','/calendar-management/','/tools-automation/'].includes(requestedReturn)?requestedReturn:null;const returnToCms=!!returnTo;useEffect(()=>{if(!session.loading&&session.isAdmin&&returnToCms)location.replace(returnTo)},[session.loading,session.isAdmin,returnTo]);if(!session.loading&&session.isAdmin&&returnToCms)return <div className="admin-welcome"><p>Opening your workspace…</p></div>;if(session.loading)return <div className="admin-welcome"><p>Checking your admin session…</p></div>;if(session.isAdmin)return <AdminConsole email={session.user?.email}/>;return <div className="mwa-admin-auth"><div className="admin-auth-intro"><div className="eyebrow">ONE MWA · ONE ADMIN ACCOUNT</div><h1>Admin login.</h1><p>Use your existing MWA calendar admin account. After signing in, open the calendar workspace or manage website content.</p></div><AdminLoginCard {...session}/></div>}
 if(location.pathname.replace(/\/$/,'')==='/admin-login'){
  document.querySelector('#main').hidden=true;document.querySelector('.skip')?.setAttribute('href','#admin-main');document.querySelector('#admin-main').hidden=false;
 
@@ -31,7 +33,9 @@ if(location.pathname.replace(/\/$/,'')==='/admin-login'){
 if(location.pathname.replace(/\/$/,'')==='/member-login')window.MWA_BRIDGE_READY.then(()=>{document.querySelector('[data-action="login"]').click()});
 
 function WebsiteSession(){
- const session=useAuth();const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ const session=useAuth();
+ useEffect(()=>{if(session.isAdmin && !['/calendar/','/calendar-management/','/tools-automation/','/islamic-events/'].includes(location.pathname))recordActivity(location.pathname==='/cms'?'website-cms':'website','module.opened',location.pathname);},[session.isAdmin]);
+ const [busy,setBusy]=useState(false);const [error,setError]=useState('');
  useEffect(()=>{window.mwaAdminSession={loading:session.loading,isAdmin:session.isAdmin,signedIn:!!session.user};if(session.loading)return;resolveAdminReady();window.MWA_BRIDGE_RESOLVE();window.dispatchEvent(new Event('mwa-auth-changed'))},[session.loading,session.isAdmin,session.user?.uid]);
  async function signOut(){setBusy(true);setError('');try{await session.logout()}catch{setError('Could not sign out. Please try again.')}finally{setBusy(false)}}
  return <>{session.isAdmin?<button className="btn alt small admin-header" type="button" disabled={busy} aria-busy={busy} onClick={signOut}>Admin Sign out</button>:<a className="btn alt small admin-header" href="/admin-login">Admin Login</a>}{session.isAdmin&&createPortal(<a className="nav-admin-console" href="/admin-login" aria-current={location.pathname==='/admin-login'?'page':undefined}>Admin Console</a>,document.querySelector('#nav'))}{error&&<span role="alert" className="admin-header-error">{error}</span>}{location.pathname.replace(/\/$/,'')==='/admin-login'&&createPortal(<AdminLogin/>,document.querySelector('#admin-root'))}</>;
@@ -41,3 +45,7 @@ const sessionRoot=document.createElement('span');sessionRoot.className='admin-he
 adminHeader.replaceWith(sessionRoot);
 createRoot(sessionRoot).render(<AuthProvider><WebsiteSession/></AuthProvider>);
 mountCalendarShell();
+
+mountCommunityCalendar();
+
+window.addEventListener('mwa-appearance-preferences',()=>{if(window.mwaAdminSession?.isAdmin)recordActivity('website','appearance.changed',document.documentElement.dataset.palette+' / '+document.documentElement.dataset.mode);});

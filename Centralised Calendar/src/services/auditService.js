@@ -1,10 +1,8 @@
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
-
-/** Admin-only live view of the most recent audit log entries. */
-export function watchAuditLog(callback, max = 200) {
-  const q = query(collection(db, 'auditLog'), orderBy('timestamp', 'desc'), limit(max));
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  });
+import {httpsCallable} from 'firebase/functions';
+import {auth,functions} from '../firebase/firebase.js';
+export async function getAuditEntries(filters={}) {return (await httpsCallable(functions,'getAuditEntries')(filters)).data;}
+export async function recordActivity(module,action,entityId='') {
+ if(!auth.currentUser)return;
+ try {await httpsCallable(functions,'recordActivity')({module,action,entityId});}
+ catch(error){console.warn('Activity could not be recorded:',error.code||'unavailable');}
 }

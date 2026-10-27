@@ -3,11 +3,11 @@ import {CalendarDays,CalendarRange,UtensilsCrossed,HandHeart,Users,Workflow,Wren
 
 export const adminModules=[
  {name:'Events & Bookings Hub',icon:CalendarDays,description:'Manage bookings, venues and event requests.',href:'/calendar/?view=admin'},
- {name:'Calendar Management',icon:CalendarRange,description:'Manage calendars, schedules and shared dates.'},
+ {name:'Calendar Management',icon:CalendarRange,description:'Manage shared dates and monthly Hijri settings.',href:'/calendar-management/'},
  {name:'Niaz Administration',icon:UtensilsCrossed,description:'Coordinate Niaz arrangements and contributions.'},
  {name:'Volunteer Administration',icon:HandHeart,description:'Organise volunteer teams and responsibilities.'},
  {name:'Member Administration',icon:Users,description:'Manage membership and community records.'},
- {name:'Tools & Automation',icon:Workflow,description:'Coordinate tools, workflows and automated tasks.'},
+ {name:'Tools & Automation',icon:Workflow,description:'Manage the admin team and review activity across modules.',href:'/tools-automation/'},
  {name:'Maintenance Administration',icon:Wrench,description:'Coordinate facility care and maintenance requests.'},
  {name:'Expense Administration',icon:Receipt,description:'Manage expenses and related records.'},
  {name:'Donation Administration',icon:HeartHandshake,description:'Manage donations and contribution records.'},

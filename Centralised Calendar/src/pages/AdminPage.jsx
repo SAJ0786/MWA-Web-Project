@@ -2,14 +2,10 @@ import {bookingToneIndex,bookingTypeStyle} from '@mwa/appearance';
 import PaletteShadePicker from '../components/PaletteShadePicker.jsx';
 import { useEffect, useState } from 'react';
 import { useAuth, OWNER_EMAIL } from '../contexts/AuthContext.jsx';
-import { watchAuditLog } from '../services/auditService.js';
-import { watchAdminTeam, addAdminEmail, removeAdminEmail } from '../services/adminTeamService.js';
 import {
   createVenue, updateVenue, deleteVenue,
   createDepartment, updateDepartment, deleteDepartment
 } from '../services/directoryService.js';
-import { getHijriSettings, saveMonthOverride, removeMonthOverride } from '../services/calendarSettingsService.js';
-import { HIJRI_MONTHS, getTodayHijriParts } from '../services/hijriService.js';
 import BookingModal from '../components/BookingModal.jsx';
 import { Trash2 } from 'lucide-react';
 import { useBookingDeletion } from '../components/useBookingDeletion.jsx';
@@ -28,7 +24,7 @@ export default function AdminPage({ events, venues, departments, hijriOverrides,
   return (
     <section>
       <div className="bar decorative-panel admin-menu" role="group" aria-label="Admin sections">
-        {['pending', 'confirmed', 'venues', 'departments', 'audit', 'hijri', 'team'].map(s => (
+        {['pending', 'confirmed', 'venues', 'departments'].map(s => (
           <button key={s} className={`tab ${sub === s ? 'on' : ''}`} aria-pressed={sub === s} onClick={() => setSub(s)}>
             {label(s)}{s === 'pending' && pending.length ? ` (${pending.length})` : ''}
           </button>
@@ -40,15 +36,12 @@ export default function AdminPage({ events, venues, departments, hijriOverrides,
       )}
       {sub === 'venues' && <VenuesTab venues={venues} />}
       {sub === 'departments' && <DepartmentsTab departments={departments} />}
-      {sub === 'audit' && <AuditTab />}
-      {sub === 'hijri' && <HijriTab adjustedBy={user.email} hijriOverrides={hijriOverrides} onReloadSettings={onReloadSettings} />}
-      {sub === 'team' && <TeamTab currentEmail={(user.email || profile?.email || '').toLowerCase()} canManage={isOwner} />}
     </section>
   );
 }
 
 function label(s) {
-  return { pending: 'Pending approvals', confirmed: 'Confirmed bookings', venues: 'Venues', departments: 'Booking Types', audit: 'Audit log', hijri: 'Hijri settings', team: 'Admin team' }[s];
+  return { pending: 'Pending approvals', confirmed: 'Confirmed bookings', venues: 'Venues', departments: 'Booking Types' }[s];
 }
 
 const GOOGLE_ERRORS = {
@@ -172,88 +165,6 @@ function LoginCard({ user, login, loginWithGoogle, logout, authError, passwordLo
         </div>
       </div>
     </section>
-  );
-}
-
-function TeamTab({ currentEmail, canManage }) {
-  const [team, setTeam] = useState(null);
-  const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState('');
-  const [msg, setMsg] = useState(null);
-
-  useEffect(() => watchAdminTeam(setTeam, () => setMsg({ err: true, text: 'Could not load the admin list.' })), []);
-
-  const fmt = iso => iso ? new Date(iso).toLocaleString('en-AU', { timeZone: 'Australia/Sydney', dateStyle: 'medium', timeStyle: 'short' }) : '—';
-
-  async function add(e) {
-    e.preventDefault();
-    const value = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { setMsg({ err: true, text: 'Enter a valid email address.' }); return; }
-    setBusy('add'); setMsg(null);
-    try {
-      await addAdminEmail(value);
-      setEmail('');
-      setMsg({ err: false, text: `${value} can now sign in with Google (or email/password).` });
-    } catch (err) {
-      setMsg({ err: true, text: err?.message || 'Could not add that email.' });
-    } finally { setBusy(''); }
-  }
-
-  async function remove(target) {
-    if (!window.confirm(`Remove admin access for ${target}? They will be signed out of admin features immediately.`)) return;
-    setBusy(target); setMsg(null);
-    try {
-      await removeAdminEmail(target);
-      setMsg({ err: false, text: `${target} no longer has admin access.` });
-    } catch (err) {
-      setMsg({ err: true, text: err?.message || 'Could not remove that email.' });
-    } finally { setBusy(''); }
-  }
-
-  return (
-    <div className="team-tab">
-      <p className="muted">
-        People on this list can sign in as admins with their Google account (or an email/password account using the same address).
-        Every sign-in and change is recorded in the Audit log. Remove someone here to revoke their access immediately.
-      </p>
-      {!canManage && (
-        <p className="team-owner-note" role="note">Only {OWNER_EMAIL} can add or remove admins.</p>
-      )}
-      {canManage && <form className="team-add" onSubmit={add}>
-        <div className="field">
-          <label htmlFor="team-email">Add admin email</label>
-          <input id="team-email" type="email" placeholder="name@gmail.com" value={email} onChange={e => setEmail(e.target.value)} disabled={!!busy} />
-        </div>
-        <button className="btn pri" type="submit" disabled={!!busy || !email.trim()}>{busy === 'add' ? 'Adding…' : 'Add'}</button>
-              </form>}
-      {msg && <div className={msg.err ? 'err' : 'ok'} role={msg.err ? 'alert' : 'status'}>{msg.err ? '⚠ ' : '✓ '}{msg.text}</div>}
-      <div className="wrap">
-        <table>
-          <thead><tr><th>Email</th><th>Name</th><th>Added by</th><th>Added</th><th>Last sign-in</th><th aria-label="Actions" /></tr></thead>
-          <tbody>
-            {team === null && <tr><td colSpan={6} className="muted">Loading…</td></tr>}
-            {team && team.map(m => (
-              <tr key={m.id}>
-                <td>{m.email || m.id}{m.id === OWNER_EMAIL && <span className="team-you">owner</span>}{m.id === currentEmail && <span className="team-you">you</span>}</td>
-                <td>{m.displayName || '—'}</td>
-                <td>{m.addedBy || '—'}</td>
-                <td>{fmt(m.addedAt)}</td>
-                <td>{m.lastSignInAt ? fmt(m.lastSignInAt) : <span className="muted">Never</span>}</td>
-                <td>
-                  {canManage && m.id !== currentEmail && m.id !== OWNER_EMAIL && (
-                    <button type="button" className="btn del" title={`Remove ${m.id}`} aria-label={`Remove ${m.id}`}
-                      disabled={!!busy || team.length <= 1} onClick={() => remove(m.id)}>
-                      <Trash2 size={16} aria-hidden="true" />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {team && !team.length && <tr><td colSpan={6} className="muted">No one is on the list yet. Existing admins are added automatically the next time they sign in.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }
 
@@ -464,93 +375,6 @@ function DepartmentsTab({ departments }) {
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function AuditTab() {
-  const [log, setLog] = useState([]);
-  useEffect(() => watchAuditLog(setLog), []);
-  return (
-    <div className="wrap">
-      <table>
-        <thead><tr><th>When</th><th>Action</th><th>Entity</th><th>By</th><th>Note</th></tr></thead>
-        <tbody>
-          {log.map(l => (
-            <tr key={l.id}>
-              <td>{l.timestamp ? new Date(l.timestamp).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' }) : ''}</td>
-              <td>{l.action}</td>
-              <td>{l.entityType} {l.entityId}</td>
-              <td>{l.userEmail || l.userId || 'system'}</td>
-              <td>{l.note || ''}</td>
-            </tr>
-          ))}
-          {!log.length && <tr><td colSpan={5} className="muted">No audit entries yet.</td></tr>}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function HijriTab({ adjustedBy, hijriOverrides, onReloadSettings }) {
-  const blankForm = () => { const h = getTodayHijriParts(hijriOverrides); return { hYear: h.year ? String(h.year) : '', hMonth: h.month ? String(h.month) : '1', gDate: '' }; };
-  const [settings, setSettings] = useState({ overrides: [] });
-  const [form, setForm] = useState(blankForm);
-  const [err, setErr] = useState('');
-
-  async function load() { setSettings(await getHijriSettings()); }
-  useEffect(() => { load(); }, []);
-
-  async function add(e) {
-    e.preventDefault();
-    setErr('');
-    if (!form.hYear || !form.gDate) { setErr('Enter a Hijri year and the Gregorian date day 1 fell/falls on.'); return; }
-    await saveMonthOverride(form.hYear, form.hMonth, form.gDate, adjustedBy);
-    setForm(blankForm());
-    await load();
-    onReloadSettings && onReloadSettings();
-  }
-
-  async function remove(o) {
-    await removeMonthOverride(o.hYear, o.hMonth);
-    await load();
-    onReloadSettings && onReloadSettings();
-  }
-
-  return (
-    <div>
-      <p className="muted">
-        Moon-sighting adjustment: anchor the first day of a Hijri month to the Gregorian date the
-        community observed it on. This overrides the tabular calculation for that month onward
-        (until a later override takes effect) and is used consistently across the public calendar,
-        bookings list and iCal export.
-      </p>
-      <form className="card" onSubmit={add} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <div><label>Hijri year</label><input type="number" value={form.hYear} onChange={e => setForm(f => ({ ...f, hYear: e.target.value }))} /></div>
-        <div>
-          <label>Hijri month</label>
-          <select value={form.hMonth} onChange={e => setForm(f => ({ ...f, hMonth: e.target.value }))}>
-            {HIJRI_MONTHS.map(m => <option key={m.value} value={m.value}>{m.name}</option>)}
-          </select>
-        </div>
-        <div><label>Day 1 fell on (Gregorian)</label><input type="date" value={form.gDate} onChange={e => setForm(f => ({ ...f, gDate: e.target.value }))} /></div>
-        <button className="btn pri" type="submit">Save override</button>
-      </form>
-      {err && <div className="err">{err}</div>}
-      <table>
-        <thead><tr><th>Hijri month</th><th>Year</th><th>Day 1 (Gregorian)</th><th></th></tr></thead>
-        <tbody>
-          {(settings.overrides || []).map((o, i) => (
-            <tr key={i}>
-              <td>{HIJRI_MONTHS.find(m => m.value === Number(o.hMonth))?.name}</td>
-              <td>{o.hYear}</td>
-              <td>{o.gDate}</td>
-              <td><button className="btn del" onClick={() => remove(o)}>Remove</button></td>
-            </tr>
-          ))}
-          {!settings.overrides?.length && <tr><td colSpan={4} className="muted">No overrides saved — using the tabular calculation.</td></tr>}
         </tbody>
       </table>
     </div>

@@ -13,7 +13,7 @@ The Muhammadi Welfare Association website and central Events & Bookings Calendar
 
 `Website/` contains the new community website, CMS function, shared colour palettes, appearance library and multi-site hosting configuration. `Centralised Calendar/` contains the existing React calendar and its booking services, rules and functions. The calendar imports the appearance library from its sibling Website folder. Keep these folder names when cloning.
 
-Member Login and the website's donation/contact/membership forms remain prototype demonstrations. Admin Login reuses the existing calendar admin accounts. Website prayer/programme panels are labelled samples; the linked calendar reads the existing live services.
+Member Login and the website's donation/contact/membership forms remain prototype demonstrations. Admin Login reuses the existing calendar admin accounts. The prayer timetable remains a sample. The website programme panels and calendar use confirmed live MWA Programs.
 
 ## Local development and publishing
 
@@ -31,6 +31,6 @@ The current source snapshot includes the existing calendar improvements that wer
 
 Previous website code, calendar appearance backups, project documents, secure documents, local settings, dependency folders and build outputs remain local and are excluded from this repository. See each application's README and calendar docs for implementation details.
 
-The website header provides Home, shared appearance controls, and session-aware Admin Login / Admin Sign out. Its Admin Console presents 12 modules with icons; only Events & Bookings Hub and Website CMS are live. Key Islamic Events is a separate website page. The calendar remains beneath the shared website header, with booking functionality preserved.
+The website header provides Home, shared appearance controls, and session-aware Admin Login / Admin Sign out. Its Admin Console presents 12 modules with icons; Events & Bookings Hub, Calendar Management, Tools & Automation, and Website CMS are live. Key Islamic Events is a separate website page. The calendar remains beneath the shared website header, with booking functionality preserved.
 
 Public booking policy: guests and non-admin accounts may create only **Events Booking** requests. Signed-in approved admins may create any active booking type, including Events Booking. This is enforced by the booking form and both server submission routes (`submitBooking` and `POST /v1/events`), using the stored department record. Existing bookings and public calendar visibility are unchanged.

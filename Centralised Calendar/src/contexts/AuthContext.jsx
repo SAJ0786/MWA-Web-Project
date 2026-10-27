@@ -1,3 +1,4 @@
+import {recordActivity} from '../services/auditService.js';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   GoogleAuthProvider, linkWithCredential, onAuthStateChanged, signInWithCredential,
@@ -142,7 +143,7 @@ export function AuthProvider({ children }) {
   };
 
   const cancelGoogleLink = () => setPendingLink(null);
-  const logout = () => signOut(auth);
+  const logout = async () => {await recordActivity('tools-automation','session.signout');return signOut(auth);};
   const isAdmin = profile?.role === 'admin';
   const isOwner = !!user && (user.email || '').toLowerCase() === OWNER_EMAIL;
 
