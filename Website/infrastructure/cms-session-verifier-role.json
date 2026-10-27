@@ -1,0 +1,8 @@
+{
+  "title": "MWA CMS session verification",
+  "description": "Read Firebase users to check revocation of existing CMS sessions; no user write permissions.",
+  "stage": "GA",
+  "includedPermissions": [
+    "firebaseauth.users.get"
+  ]
+}
