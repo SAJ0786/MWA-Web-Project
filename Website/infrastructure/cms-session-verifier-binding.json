@@ -1,0 +1,10 @@
+{
+  "project": "project-7a4fb531-414f-4ade-88e",
+  "role": "projects/project-7a4fb531-414f-4ade-88e/roles/mwaCmsSessionVerifier",
+  "members": [
+    "serviceAccount:178942309467-compute@developer.gserviceaccount.com"
+  ],
+  "condition": null,
+  "approvedOn": "2026-10-27",
+  "purpose": "Permanent server-side verification of existing CMS admin sessions. Website editing is available to every approved users/{uid}.role=admin account; individual admins do not need Cloud IAM permissions."
+}
