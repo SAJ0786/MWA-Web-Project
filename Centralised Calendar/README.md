@@ -109,3 +109,5 @@ The initial 54 definitions from the Community app are supplied as a one-time,
 create-only migration, not runtime fallback data. Before releasing this feature,
 deploy the updated Firestore rules and import the list using the steps in
 [docs/SETUP.md](docs/SETUP.md#9-key-islamic-events-initial-data).
+
+Public booking policy: guests and non-admin accounts may create only **Events Booking** requests. Signed-in approved admins may create any active booking type, including Events Booking. This is enforced by the booking form and both server submission routes (`submitBooking` and `POST /v1/events`), using the stored department record. Existing bookings and public calendar visibility are unchanged.

@@ -15,6 +15,7 @@ const notify = require('./notifications');
 const { resolveBufferHours, rangesOverlap, rangesConflict, computeAllConflicts, isWholeSiteVenue } = require('./conflictUtils');
 const { validateImportRows, MAX_IMPORT_ROWS } = require('./bookingImport');
 const { MIN_PUBLIC_LEAD_HOURS, validateBookingLeadTime } = require('./publicLeadTime');
+const { canSubmitBookingType } = require('./bookingTypePolicy');
 const { buildConflictResponse } = require('./conflictResponse');
 const { resolveBookingDates } = require('./hijriRecompute');
 const { projectPublicEvent } = require('./publicProjection');
@@ -215,6 +216,10 @@ function dateKeyOf(iso) {
   return new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
 }
 
+function requireAllowedBookingType(department, isAdmin) {
+  if (!canSubmitBookingType(department, isAdmin)) throw new HttpsError('permission-denied', 'Public users may only submit Events Booking requests. Sign in as an admin to use another booking type.');
+}
+
 function validateBookingPayload(data) {
   const required = ['title', 'departmentId', 'venueId', 'startAt', 'endAt', 'contactName', 'contactEmail'];
   const labels = { departmentId: 'booking type', venueId: 'venue', startAt: 'start time', endAt: 'end time', contactName: 'contact name', contactEmail: 'contact email' };
@@ -240,6 +245,8 @@ exports.submitBooking = onCall({ cors: true, secrets: emailSecrets }, async (req
 
   const venue = await getActiveDoc('venues', data.venueId, 'Venue');
   const department = await getActiveDoc('departments', data.departmentId, 'Booking type');
+  const submitterIsAdmin = await isSubmitterAdmin(request.auth);
+  requireAllowedBookingType(department, submitterIsAdmin);
 
   // Server-side source of truth for Hijri-based submissions: re-derive the
   // resolved Gregorian startAt/endAt from the submitted hijriDate + the
@@ -258,7 +265,6 @@ exports.submitBooking = onCall({ cors: true, secrets: emailSecrets }, async (req
   // see publicProjection.js). A signed-in admin creating a booking on someone's
   // behalf may explicitly choose public/private; if they don't specify one,
   // it defaults to private (the safer choice for admin-entered bookings).
-  const submitterIsAdmin = await isSubmitterAdmin(request.auth);
   if (!validateBookingLeadTime(resolvedDates.startAt, submitterIsAdmin)) {
     throw new HttpsError(
       'failed-precondition',
@@ -983,10 +989,11 @@ app.post('/v1/events', async (req, res) => {
     validateBookingPayload(req.body);
     const venue = await getActiveDoc('venues', req.body.venueId, 'Venue');
     const department = await getActiveDoc('departments', req.body.departmentId, 'Booking type');
+    const admin = await authenticateAdmin(req);
+    requireAllowedBookingType(department, !!admin);
     const overrides = await getHijriOverrides();
     const program = programFields(req.body);
     const resolvedDates = applyPrayerTimes(resolveBookingDates(req.body, overrides), program);
-    const admin = await authenticateAdmin(req);
     if (!validateBookingLeadTime(resolvedDates.startAt, !!admin)) {
       throw new HttpsError(
         'failed-precondition',

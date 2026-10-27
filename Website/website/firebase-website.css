@@ -15,3 +15,8 @@ body.mwa-calendar-page{height:100dvh;overflow:hidden}
 @media(max-width:960px){.garden .header-in{flex-wrap:wrap}.garden .menu-toggle{display:block}.garden .donate-header{display:none}.garden .nav{display:none;position:absolute;top:100%;left:0;right:0;background:var(--paper);padding:22px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:18px;box-shadow:0 15px 20px #0001}.garden .nav.open{display:flex}.admin-module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.garden .home-header{padding:8px 9px;font-size:10px}.garden .home-header svg{width:13px;height:13px}.admin-console{width:calc(100% - 36px);margin:35px auto 45px}.admin-console h1{font-size:34px}.admin-module-grid{grid-template-columns:1fr;gap:13px}.admin-module{padding:21px}.admin-module-top{margin-bottom:19px}}
 @media(prefers-reduced-motion:reduce){.admin-module.is-live{transition:none}.admin-module.is-live:hover{transform:none}}
+
+.garden .brand-name{display:block;max-width:none;font-size:clamp(17px,1.6vw,22px);font-weight:600;white-space:nowrap;line-height:1.18}
+.garden .brand-title{display:block;white-space:nowrap;letter-spacing:-.025em}
+.garden .brand-name small{display:block;font-size:.58em;font-weight:400;letter-spacing:.08em;white-space:nowrap;margin-top:.45em;line-height:1.25}
+@media(max-width:960px){.garden .header-in .brand{flex:1 1 100%;margin-right:0;gap:10px}.garden .brand-name{display:block;max-width:none;font-size:clamp(12px,3.4vw,17px)}.garden .brand-name small{display:block;font-size:.58em}.garden .official-logo{width:54px;height:54px;flex-shrink:0}}

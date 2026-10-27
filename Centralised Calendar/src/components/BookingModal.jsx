@@ -12,6 +12,7 @@ import {
 } from '../utils/prayerTimes.js';
 import { ProgramExtrasSummary, ProgramExtrasEditor } from './ProgramExtras.jsx';
 import SeriesDeletePrompt from './SeriesDeletePrompt.jsx';
+import { availableBookingTypes } from '../utils/bookingTypes.js';
 
 // Speaker / program details / prayer-time (variable) scheduling apply to this booking type only.
 const PROGRAM_TYPE_NAME = 'mwa programs';
@@ -78,6 +79,13 @@ function BookingModalInner({
     setRep(DEFAULT_REPEAT); setConflict(null); setPreview(null);
     setProtectionWarning(''); setExtras(null); setExtrasSection(null);
   }, [selectedBooking, open, initialDate, isAdmin]);
+
+  const bookingTypes = useMemo(() => availableBookingTypes(departments, isAdmin), [departments, isAdmin]);
+  useEffect(() => {
+    if (!open || isAdmin || editing) return;
+    setForm(current => bookingTypes.some(type => type.id === current.departmentId)
+      ? current : { ...current, departmentId: bookingTypes[0]?.id || '' });
+  }, [open, isAdmin, editing, bookingTypes]);
 
   const gregorianDate = useMemo(() => {
     if (form.basis === 'g') return form.date;
@@ -477,10 +485,10 @@ function BookingModalInner({
 
             <div className="r2">
               <div>
-                <label>Booking type</label>
-                <select value={form.departmentId} onChange={e => setBookingType(e.target.value)} required>
+                <label htmlFor="booking-type">Booking type</label>
+                <select id="booking-type" value={form.departmentId} onChange={e => setBookingType(e.target.value)} required>
                   <option value="">Select…</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  {bookingTypes.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
               <div>

@@ -44,6 +44,9 @@ Query params: `from`, `to` (ISO date/time, inclusive bounds on `startAt`), `venu
 ## `POST /v1/events`
 
 Public (or admin, with an `Authorization: Bearer <token>`) — submits a booking request.
+
+Public and non-admin callers may submit only the active **Events Booking** type.
+The server looks up `departmentId` in Firestore; a caller-supplied type name or admin flag cannot bypass this policy. Approved admins may submit any active booking type, including Events Booking. Other public types return `403` before any booking or email is created. The `submitBooking` callable enforces the same policy.
 Body: `title`, `departmentId`, `venueId`, `startAt`, `endAt`, `contactName`,
 `contactEmail`, optional `contactPhone`, `notes`, `dateBasis` (`"g"`/`"h"`), `hijriDate`,
 optional `visibility` (`"public"`/`"private"`).
