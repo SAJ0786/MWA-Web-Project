@@ -1,13 +1,16 @@
-import React from 'react';
+import React,{useState} from 'react';
+import {createPortal} from 'react-dom';
 import {createRoot} from 'react-dom/client';
 import {onAuthStateChanged} from 'firebase/auth';
 import {doc,onSnapshot} from 'firebase/firestore';
 import {auth,db} from '@calendar/firebase/firebase.js';
 import {AuthProvider,useAuth} from '@calendar/contexts/AuthContext.jsx';
 import AdminLoginCard from './AdminLoginCard.jsx';
+import AdminConsole from './AdminConsole.jsx';
 import {schemes,defaults,applyAppearance,normaliseSettings} from '../shared/appearance.js';
 import './firebase-website.css';
 import './solar-panel.js';
+import {mountCalendarShell} from './calendar-shell.js';
 
 window.MWA_SCHEMES=schemes;
 let siteSettings=defaults;applyAppearance(siteSettings);
@@ -18,10 +21,20 @@ onSnapshot(doc(db,'calendarSettings','websiteAppearance'),snapshot=>{if(snapshot
 const refreshAppearance=()=>applyAppearance(siteSettings);
 window.addEventListener('storage',refreshAppearance);window.addEventListener('mwa-appearance-preferences',refreshAppearance);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',refreshAppearance);
 
-const safeDestination=value=>value==='/cms'?'/cms':'/calendar/?view=admin';
-function AdminLogin(){const session=useAuth();const destination=safeDestination(new URLSearchParams(location.search).get('returnTo'));if(session.loading)return <div className="admin-welcome"><p>Checking your admin session…</p></div>;if(session.isAdmin)return <section className="admin-welcome"><div className="eyebrow">MWA · ADMIN WORKSPACE</div><h1>Welcome back.</h1><p>Signed in as {session.user?.email}. Your calendar admin access is ready.</p><div className="admin-workspaces"><a className="btn" href={destination}>{destination==='/cms'?'Open website CMS':'Open calendar admin'} ↗</a><a className="btn alt" href={destination==='/cms'?'/calendar/?view=admin':'/cms'}>{destination==='/cms'?'Calendar admin':'Website CMS'} ↗</a><a className="text-link" href="/calendar/">View public calendar →</a></div><button type="button" className="admin-signout" onClick={session.logout}>Sign out</button></section>;return <div className="mwa-admin-auth"><div className="admin-auth-intro"><div className="eyebrow">ONE MWA · ONE ADMIN ACCOUNT</div><h1>Admin login.</h1><p>Use your existing MWA calendar admin account. After signing in, open the calendar workspace or manage website content.</p></div><AdminLoginCard {...session}/></div>}
+function AdminLogin(){const session=useAuth();if(session.loading)return <div className="admin-welcome"><p>Checking your admin session…</p></div>;if(session.isAdmin)return <AdminConsole email={session.user?.email}/>;return <div className="mwa-admin-auth"><div className="admin-auth-intro"><div className="eyebrow">ONE MWA · ONE ADMIN ACCOUNT</div><h1>Admin login.</h1><p>Use your existing MWA calendar admin account. After signing in, open the calendar workspace or manage website content.</p></div><AdminLoginCard {...session}/></div>}
 if(location.pathname.replace(/\/$/,'')==='/admin-login'){
  document.querySelector('#main').hidden=true;document.querySelector('.skip')?.setAttribute('href','#admin-main');document.querySelector('#admin-main').hidden=false;
- createRoot(document.querySelector('#admin-root')).render(<AuthProvider><AdminLogin/></AuthProvider>);
+
 }
 if(location.pathname.replace(/\/$/,'')==='/member-login')window.MWA_BRIDGE_READY.then(()=>{document.querySelector('[data-action="login"]').click()});
+
+function WebsiteSession(){
+ const session=useAuth();const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ async function signOut(){setBusy(true);setError('');try{await session.logout()}catch{setError('Could not sign out. Please try again.')}finally{setBusy(false)}}
+ return <>{session.isAdmin?<button className="btn alt small admin-header" type="button" disabled={busy} aria-busy={busy} onClick={signOut}>Admin Sign out</button>:<a className="btn alt small admin-header" href="/admin-login">Admin Login</a>}{session.isAdmin&&createPortal(<a className="nav-admin-console" href="/admin-login" aria-current={location.pathname==='/admin-login'?'page':undefined}>Admin Console</a>,document.querySelector('#nav'))}{error&&<span role="alert" className="admin-header-error">{error}</span>}{location.pathname.replace(/\/$/,'')==='/admin-login'&&createPortal(<AdminLogin/>,document.querySelector('#admin-root'))}</>;
+}
+const adminHeader=document.querySelector('.admin-header');
+const sessionRoot=document.createElement('span');sessionRoot.className='admin-header-slot';
+adminHeader.replaceWith(sessionRoot);
+createRoot(sessionRoot).render(<AuthProvider><WebsiteSession/></AuthProvider>);
+mountCalendarShell();

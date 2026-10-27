@@ -21,3 +21,7 @@ Visual changes in Centralised Calendar are limited to `src/main.jsx`, `src/App.j
 Verification: the existing 48 calendar utility tests pass; five CMS validation tests pass. Production builds cover both calendar base paths. Public CMS reads and denied anonymous writes are checked separately. Real admin authentication requires the account holder's Google sign-in; no credentials or test bookings are created by this migration.
 
 The decorative sun arc shows the current daylight progress at the MWA centre in Kemps Creek, using the calendar’s existing location and solar calculation. It refreshes each minute in Australia/Sydney time (including daylight saving) and hides the sun at night. Its sunrise/sunset labels are calculated; the separate prayer timetable remains prototype content.
+
+The public `/calendar/` page now retains the website header. The existing calendar runs in a same-origin `/calendar-app/` frame to preserve its styles, dialogs and booking behaviour. Calendar entry points opened directly redirect to the website shell. The website header reuses the existing admin AuthProvider and changes from Admin Login to Admin Sign out for an approved admin.
+
+The website header includes Home on every page. Approved admins see Admin Sign out and an Admin Console navigation link. The console presents 12 modules with icons; Events & Bookings Hub and Website CMS are active, with the remaining modules marked Coming soon. Key Islamic Events now has its own public website page at `/islamic-events/`; its existing content, filters and admin editing stay unchanged.

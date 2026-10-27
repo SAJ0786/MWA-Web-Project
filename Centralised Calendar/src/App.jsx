@@ -24,7 +24,10 @@ export default function App() {
 
   // Presentation entry point from the website. Guests still open the public calendar.
   useEffect(() => {
-    if (isAdmin && new URLSearchParams(window.location.search).get('view') === 'admin') setTab('admin');
+    const view=new URLSearchParams(window.location.search).get('view');
+    if(view==='islamic-events')setTab('islamic-events');
+    else if(isAdmin && view==='admin')setTab('admin');
+    else if(!isAdmin)setTab(current=>current==='admin'?'calendar':current);
   }, [isAdmin]);
 
   useEffect(() => {

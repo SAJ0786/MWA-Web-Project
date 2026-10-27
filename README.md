@@ -6,6 +6,7 @@ The Muhammadi Welfare Association website and central Events & Bookings Calendar
 - [Admin Login](https://mwa-community-web.web.app/admin-login)
 - [Website CMS](https://mwa-community-web.web.app/cms)
 - [Calendar with the website's sign-in session](https://mwa-community-web.web.app/calendar/)
+- [Key Islamic Events](https://mwa-community-web.web.app/islamic-events/)
 - [Existing calendar address](https://eventscalendar.muhammadiwelfare.org.au)
 
 ## Source folders
@@ -29,3 +30,5 @@ Publishing website content also publishes shared appearance defaults. Visitors m
 The current source snapshot includes the existing calendar improvements that were already present locally, followed by the website/appearance integration. All 48 calendar utility checks and five CMS validation checks pass. Production bundles were built and deployed; public calendar access, anonymous CMS write rejection, the admin entry, shared visitor preferences, and 320px/390px layouts were checked. Actual Google account sign-in requires verification by the account holder.
 
 Previous website code, calendar appearance backups, project documents, secure documents, local settings, dependency folders and build outputs remain local and are excluded from this repository. See each application's README and calendar docs for implementation details.
+
+The website header provides Home, shared appearance controls, and session-aware Admin Login / Admin Sign out. Its Admin Console presents 12 modules with icons; only Events & Bookings Hub and Website CMS are live. Key Islamic Events is a separate website page. The calendar remains beneath the shared website header, with booking functionality preserved.

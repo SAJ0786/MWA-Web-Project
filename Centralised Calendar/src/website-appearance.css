@@ -31,3 +31,11 @@ body{background:var(--background);color:var(--foreground)}
 @media(max-width:380px){.brand.brand-logo strong{max-width:140px}.mwa-appearance-dialog{padding:22px 18px}.mwa-palette-options button{gap:7px;padding:10px 8px}.app-header.decorative-panel .header-actions>.lb{font-size:10px;padding:0 9px}}
 
 .dt-g{color:var(--foreground)}.dt-h{color:var(--accent)}.calendar-date.outside .dt-g{color:var(--muted-foreground)}.lb,.seg-btn{color:var(--foreground)}
+
+:root[data-mwa-embedded=true] .brand-logo-tile,:root[data-mwa-embedded=true] .mwa-appearance-trigger{display:none}
+:root[data-mwa-embedded=true] .brand.brand-logo{border:0;padding-right:0}
+:root[data-mwa-embedded=true] .brand.brand-logo strong{font-size:18px;max-width:none;letter-spacing:-.03em;font-weight:600}
+:root[data-mwa-embedded=true] .app-header.decorative-panel{min-height:70px}
+@media(max-width:760px){:root[data-mwa-embedded=true] .brand.brand-logo strong{font-size:18px}}
+
+:root[data-mwa-view=islamic-events] .app-footer{display:none}
