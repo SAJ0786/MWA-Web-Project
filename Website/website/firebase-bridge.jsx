@@ -7,6 +7,7 @@ import {AuthProvider,useAuth} from '@calendar/contexts/AuthContext.jsx';
 import AdminLoginCard from './AdminLoginCard.jsx';
 import {schemes,defaults,applyAppearance,normaliseSettings} from '../shared/appearance.js';
 import './firebase-website.css';
+import './solar-panel.js';
 
 window.MWA_SCHEMES=schemes;
 let siteSettings=defaults;applyAppearance(siteSettings);
