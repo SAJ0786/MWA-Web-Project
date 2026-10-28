@@ -4,3 +4,5 @@ test('unsafe links and invalid email addresses cannot be published',()=>{const a
 test('rejects unsupported palettes and custom colours',()=>{for(const patch of [{palette:'invalid'},{mode:'invalid'},{customPrimary:'red'},{useCustomPrimary:'yes'}])assert.equal(validateContent({...source,...patch}),null)});
 test('a logo must contain raster bytes with the declared signature',()=>{const a=structuredClone(source);a.logo='data:image/png;base64,'+Buffer.from('<svg></svg>').toString('base64');assert.equal(validateContent(a),null)});
 test('empty or oversized page fields are rejected',()=>{for(const value of ['', 'x'.repeat(2001)]){const a=structuredClone(source);a.content.copy_2=value;assert.equal(validateContent(a),null)}});
+
+test('older CMS sessions receive defaults for newly introduced tutoring fields',()=>{const a=structuredClone(source);for(const key of Object.keys(a.content))if(key.startsWith('tutoring_'))delete a.content[key];assert.deepEqual(validateContent(a),source)});

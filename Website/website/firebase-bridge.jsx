@@ -11,6 +11,8 @@ import AdminLoginCard from './AdminLoginCard.jsx';
 import AdminConsole from './AdminConsole.jsx';
 import {schemes,defaults,applyAppearance,normaliseSettings} from '../shared/appearance.js';
 import './firebase-website.css';
+import './website-polish.css';
+import './website-polish.js';
 import './solar-panel.js';
 import {mountCalendarShell} from './calendar-shell.js';
 
@@ -38,7 +40,7 @@ function WebsiteSession(){
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');
  useEffect(()=>{window.mwaAdminSession={loading:session.loading,isAdmin:session.isAdmin,signedIn:!!session.user};if(session.loading)return;resolveAdminReady();window.MWA_BRIDGE_RESOLVE();window.dispatchEvent(new Event('mwa-auth-changed'))},[session.loading,session.isAdmin,session.user?.uid]);
  async function signOut(){setBusy(true);setError('');try{await session.logout()}catch{setError('Could not sign out. Please try again.')}finally{setBusy(false)}}
- return <>{session.isAdmin?<button className="btn alt small admin-header" type="button" disabled={busy} aria-busy={busy} onClick={signOut}>Admin Sign out</button>:<a className="btn alt small admin-header" href="/admin-login">Admin Login</a>}{session.isAdmin&&createPortal(<a className="nav-admin-console" href="/admin-login" aria-current={location.pathname==='/admin-login'?'page':undefined}>Admin Console</a>,document.querySelector('#nav'))}{error&&<span role="alert" className="admin-header-error">{error}</span>}{location.pathname.replace(/\/$/,'')==='/admin-login'&&createPortal(<AdminLogin/>,document.querySelector('#admin-root'))}</>;
+ return <>{session.isAdmin?<button className="btn alt small admin-header" type="button" disabled={busy} aria-busy={busy} onClick={signOut}>Admin Sign out</button>:<a className="btn alt small admin-header" href="/admin-login">Admin Login</a>}{session.isAdmin&&createPortal(<><a href="/calendar/" className="nav-bookings">Events &amp; Booking</a><a className="nav-admin-console" href="/admin-login" aria-current={location.pathname==='/admin-login'?'page':undefined}>Admin Console</a></>,document.querySelector('#nav'))}{error&&<span role="alert" className="admin-header-error">{error}</span>}{location.pathname.replace(/\/$/,'')==='/admin-login'&&createPortal(<AdminLogin/>,document.querySelector('#admin-root'))}</>;
 }
 const adminHeader=document.querySelector('.admin-header');
 const sessionRoot=document.createElement('span');sessionRoot.className='admin-header-slot';
@@ -49,3 +51,9 @@ mountCalendarShell();
 mountCommunityCalendar();
 
 window.addEventListener('mwa-appearance-preferences',()=>{if(window.mwaAdminSession?.isAdmin)recordActivity('website','appearance.changed',document.documentElement.dataset.palette+' / '+document.documentElement.dataset.mode);});
+
+// One server-managed visibility list applies to all visitors and survives refreshes.
+let hiddenSocialIds=new Set();
+async function applySocialVisibility(){for(const link of document.querySelectorAll('.social-update[data-cms-link]')){try{const url=new URL(link.href);for(const key of [...url.searchParams.keys()])if(/^utm_/i.test(key)||['fbclid','igsh','igshid','si','_r','_t'].includes(key))url.searchParams.delete(key);url.searchParams.sort();url.hash='';url.pathname=url.pathname.replace(/\/$/,'');const bytes=new TextEncoder().encode(url.href.replace(/\/$/,''));const key=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join('');link.hidden=hiddenSocialIds.has(key);}catch{link.hidden=false;}}}
+onSnapshot(doc(db,'calendarSettings','socialModeration'),snapshot=>{hiddenSocialIds=new Set(snapshot.exists()?snapshot.data().hiddenPostIds||[]:[]);applySocialVisibility()},()=>{});
+window.addEventListener('mwa-content-rendered',applySocialVisibility);

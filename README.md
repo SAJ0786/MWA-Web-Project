@@ -34,3 +34,12 @@ Previous website code, calendar appearance backups, project documents, secure do
 The website header provides Home, shared appearance controls, and session-aware Admin Login / Admin Sign out. Its Admin Console presents 12 modules with icons; Events & Bookings Hub, Calendar Management, Tools & Automation, and Website CMS are live. Key Islamic Events is a separate website page. The calendar remains beneath the shared website header, with booking functionality preserved.
 
 Public booking policy: guests and non-admin accounts may create only **Events Booking** requests. Signed-in approved admins may create any active booking type, including Events Booking. This is enforced by the booking form and both server submission routes (`submitBooking` and `POST /v1/events`), using the stored department record. Existing bookings and public calendar visibility are unchanged.
+
+
+### Public website refresh — 28 October 2026
+
+The public header has matched Home/member/admin controls, icon navigation, a compact Appearance button, and a separate donation strip. Public navigation uses What’s on; Events & Booking and Admin Console links appear only for approved admins. The footer uses community and verified social account links; CMS remains hidden unless authorised. School, Venue Booking and the new CMS-editable Tutoring panel share a keyboard/swipe carousel. Prayer timetable demonstration labels were removed at MWA’s request; the existing CMS-managed times were not recalculated by this release.
+
+Tools & Automation → Social posts provides persistent hide/restore controls for the website’s existing selected Facebook posts. GET/PUT `/api/social-moderation` requires the existing approved-admin session; PUT also validates origin and content type. Hidden post IDs are stored in `calendarSettings/socialModeration` and changes and verified actors are written atomically to the audit log. Website visitors receive the visibility changes through the shared settings watcher. No live post visibility was changed during release testing.
+
+Facebook, Instagram, TikTok, YouTube and Linktree profile links are configured, but automatic social ingestion is not connected. Provider app setup/account authorisation (and an Instagram professional account) remains necessary before replacing selected posts with automatic feeds. Future ingestion must retain stable canonical post identities and apply the same visibility list. Gallery upload storage has not been provisioned; Cloudflare R2 is the proposed low-cost object store, with Cloudinary or existing hosting as alternatives.

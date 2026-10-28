@@ -5,6 +5,7 @@ const {onRequest}=require('firebase-functions/v2/https');
 const {validateContent}=require('./validateContent');
 const model=require('./content-model.json');
 const {sessionAllowed}=require('./adminAccess');
+const {sources,selectedPosts,setVisibility,cleanVisibility}=require('./socialModeration');
 initializeApp();const db=getFirestore();
 const origins=new Set(['https://mwa-community-web.web.app','https://mwa-community-web.firebaseapp.com','http://127.0.0.1:5174','http://localhost:5174']);
 async function editorFor(req){try{const match=/^Bearer (.+)$/.exec(req.get('Authorization')||'');if(!match)return null;const token=await getAuth().verifyIdToken(match[1],true);const user=await db.doc('users/'+token.uid).get();if(!user.exists||user.data().role!=='admin')return null;const auth=await db.doc('calendarSettings/auth').get();if(!sessionAllowed({provider:token.firebase?.sign_in_provider||'',passwordLoginDisabled:auth.exists&&auth.data().passwordLoginDisabled===true}))return null;return token}catch{return null}}
@@ -13,6 +14,16 @@ exports.websiteCmsApi=onRequest({region:'australia-southeast1',maxInstances:3},a
  const origin=req.get('Origin');if(origin&&origins.has(origin)){res.set('Access-Control-Allow-Origin',origin);res.set('Vary','Origin');res.set('Access-Control-Allow-Headers','Authorization, Content-Type');res.set('Access-Control-Allow-Methods','GET, PUT, OPTIONS')}
  if(req.method==='OPTIONS')return res.status(origin&&origins.has(origin)?204:403).end();
  try{
+  const socialRoute=req.path.replace(/\/$/,'').endsWith('/social-moderation');
+  if(socialRoute){
+   const actor=await editorFor(req);if(!actor)return res.status(401).json({error:'Sign in with an approved MWA admin account.'});
+   if(req.method==='GET'){const [content,moderation]=await Promise.all([db.doc('websiteContent/main').get(),db.doc('calendarSettings/socialModeration').get()]);const hidden=moderation.exists?moderation.data().hiddenPostIds||[]:[];const posts=selectedPosts(content.exists?content.data().document?.content:model.defaults.content).map(post=>({...post,hidden:hidden.includes(post.id)}));return res.json({sources,posts});}
+   if(req.method!=='PUT')return res.status(405).json({error:'Method not allowed.'});
+   if(!origin||!origins.has(origin))return res.status(403).json({error:'Request origin is not allowed.'});
+   if(!req.is('application/json'))return res.status(415).json({error:'Use a JSON visibility setting.'});
+   try{cleanVisibility(req.body)}catch{return res.status(400).json({error:'Choose a valid post and visibility.'})}
+   await setVisibility(db,actor,req.body);return res.json({ok:true});
+  }
   const ref=db.doc('websiteContent/main');
   if(req.method==='GET'){const snapshot=await ref.get();const record=snapshot.exists?snapshot.data():null;const stored=record?.document||model.defaults;const document={...model.defaults,...stored,content:{...model.defaults.content,...stored.content}};return res.json({document,revision:record?.revision||0,updatedAt:record?.updatedAt||null,canEdit:!!await editorFor(req)})}
   if(req.method!=='PUT')return res.status(405).json({error:'Method not allowed.'});

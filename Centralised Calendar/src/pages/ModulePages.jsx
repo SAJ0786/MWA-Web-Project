@@ -1,9 +1,10 @@
 import {useState} from 'react';
-import {Users,ScrollText,CalendarRange,MoonStar,ArrowUpRight} from 'lucide-react';
+import {Users,Eye,ScrollText,CalendarRange,MoonStar,ArrowUpRight} from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext.jsx';
 import TeamTab from '../components/AdminTeam.jsx';
 import HijriTab from '../components/HijriSettings.jsx';
 import AuditLog from '../components/AuditLog.jsx';
+import SocialModeration from '../components/SocialModeration.jsx';
 import SharedDateCalendar from '../components/SharedDateCalendar.jsx';
 
 export function ModuleGate({name,children}) {
@@ -19,5 +20,5 @@ export function CalendarManagement({hijriOverrides,onReloadSettings}) {
 }
 export function ToolsAutomation() {
   const {user,profile,isOwner}=useAuth();const [tab,setTab]=useState('audit');
-  return <ModuleGate name="Tools & Automation"><Intro Icon={ScrollText} name="Tools & Automation">Manage the admin team and review activity across MWA’s live modules.</Intro><section className="page-panel glass-panel"><div className="bar admin-menu" role="group" aria-label="Tools sections">{[['audit','Audit log',ScrollText],['team','Admin team',Users]].map(([id,label,Icon])=><button key={id} className={'tab '+(tab===id?'on':'')} aria-pressed={tab===id} onClick={()=>setTab(id)}><Icon size={16}/>{label}</button>)}</div>{tab==='team'?<TeamTab currentEmail={(user?.email||profile?.email||'').toLowerCase()} canManage={isOwner}/>:<AuditLog/>}</section></ModuleGate>;
+  return <ModuleGate name="Tools & Automation"><Intro Icon={ScrollText} name="Tools & Automation">Manage the admin team and review activity across MWA’s live modules.</Intro><section className="page-panel glass-panel"><div className="bar admin-menu" role="group" aria-label="Tools sections">{[['audit','Audit log',ScrollText],['team','Admin team',Users],['social','Social posts',Eye]].map(([id,label,Icon])=><button key={id} className={'tab '+(tab===id?'on':'')} aria-pressed={tab===id} onClick={()=>setTab(id)}><Icon size={16}/>{label}</button>)}</div>{tab==='social'?<SocialModeration/>:tab==='team'?<TeamTab currentEmail={(user?.email||profile?.email||'').toLowerCase()} canManage={isOwner}/>:<AuditLog/>}</section></ModuleGate>;
 }
