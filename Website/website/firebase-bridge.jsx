@@ -9,6 +9,8 @@ import {auth,db} from '@calendar/firebase/firebase.js';
 import {AuthProvider,useAuth} from '@calendar/contexts/AuthContext.jsx';
 import AdminLoginCard from './AdminLoginCard.jsx';
 import AdminConsole from './AdminConsole.jsx';
+import EnquiriesPage from './EnquiriesPage.jsx';
+import './contact-form.js';
 import {schemes,defaults,applyAppearance,normaliseSettings} from '../shared/appearance.js';
 import './firebase-website.css';
 import './website-polish.css';
@@ -27,11 +29,12 @@ onSnapshot(doc(db,'calendarSettings','websiteAppearance'),snapshot=>{if(snapshot
 const refreshAppearance=()=>applyAppearance(siteSettings);
 window.addEventListener('storage',refreshAppearance);window.addEventListener('mwa-appearance-preferences',refreshAppearance);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',refreshAppearance);
 
-function AdminLogin(){const session=useAuth();useEffect(()=>{window.mwaPageReady?.()},[]);const requestedReturn=new URLSearchParams(location.search).get('returnTo');const returnTo=['/cms','/calendar-management/','/tools-automation/'].includes(requestedReturn)?requestedReturn:null;const returnToCms=!!returnTo;useEffect(()=>{if(!session.loading&&session.isAdmin&&returnToCms)location.replace(returnTo)},[session.loading,session.isAdmin,returnTo]);if(!session.loading&&session.isAdmin&&returnToCms)return <div className="admin-welcome"><p>Opening your workspace…</p></div>;if(session.loading)return <div className="admin-welcome"><p>Checking your admin session…</p></div>;if(session.isAdmin)return <AdminConsole email={session.user?.email}/>;return <div className="mwa-admin-auth"><div className="admin-auth-intro"><div className="eyebrow">ONE MWA · ONE ADMIN ACCOUNT</div><h1>Admin login.</h1><p>Use your existing MWA calendar admin account. After signing in, open the calendar workspace or manage website content.</p></div><AdminLoginCard {...session}/></div>}
+function AdminLogin(){const session=useAuth();useEffect(()=>{window.mwaPageReady?.()},[]);const requestedReturn=new URLSearchParams(location.search).get('returnTo');const returnTo=['/cms','/calendar-management/','/tools-automation/'].includes(requestedReturn)||/^\/enquiries\/(?:\?thread=[a-f0-9]{32})?$/.test(requestedReturn||'')?requestedReturn:null;const returnToCms=!!returnTo;useEffect(()=>{if(!session.loading&&session.isAdmin&&returnToCms)location.replace(returnTo)},[session.loading,session.isAdmin,returnTo]);if(!session.loading&&session.isAdmin&&returnToCms)return <div className="admin-welcome"><p>Opening your workspace…</p></div>;if(session.loading)return <div className="admin-welcome"><p>Checking your admin session…</p></div>;if(session.isAdmin)return <AdminConsole email={session.user?.email}/>;return <div className="mwa-admin-auth"><div className="admin-auth-intro"><div className="eyebrow">ONE MWA · ONE ADMIN ACCOUNT</div><h1>Admin login.</h1><p>Use your existing MWA calendar admin account. After signing in, open the calendar workspace or manage website content.</p></div><AdminLoginCard {...session}/></div>}
 if(location.pathname.replace(/\/$/,'')==='/admin-login'){
  document.querySelector('#main').hidden=true;document.querySelector('.skip')?.setAttribute('href','#admin-main');document.querySelector('#admin-main').hidden=false;
 
 }
+if(location.pathname.replace(/\/$/,'')==='/enquiries'){document.querySelector('#main').hidden=true;document.querySelector('#enquiries-main').hidden=false;document.querySelector('.skip')?.setAttribute('href','#enquiries-main');}
 if(location.pathname.replace(/\/$/,'')==='/member-login')window.MWA_BRIDGE_READY.then(()=>{document.querySelector('[data-action="login"]').click()});
 
 function WebsiteSession(){
@@ -40,7 +43,7 @@ function WebsiteSession(){
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');
  useEffect(()=>{window.mwaAdminSession={loading:session.loading,isAdmin:session.isAdmin,signedIn:!!session.user};if(session.loading)return;resolveAdminReady();window.MWA_BRIDGE_RESOLVE();window.dispatchEvent(new Event('mwa-auth-changed'))},[session.loading,session.isAdmin,session.user?.uid]);
  async function signOut(){setBusy(true);setError('');try{await session.logout()}catch{setError('Could not sign out. Please try again.')}finally{setBusy(false)}}
- return <>{session.isAdmin?<button className="btn alt small admin-header" type="button" disabled={busy} aria-busy={busy} onClick={signOut}>Admin Sign out</button>:<a className="btn alt small admin-header" href="/admin-login">Admin Login</a>}{session.isAdmin&&createPortal(<><a href="/calendar/" className="nav-bookings">Events &amp; Booking</a><a className="nav-admin-console" href="/admin-login" aria-current={location.pathname==='/admin-login'?'page':undefined}>Admin Console</a></>,document.querySelector('#nav'))}{error&&<span role="alert" className="admin-header-error">{error}</span>}{location.pathname.replace(/\/$/,'')==='/admin-login'&&createPortal(<AdminLogin/>,document.querySelector('#admin-root'))}</>;
+ return <>{session.isAdmin?<button className="btn alt small admin-header" type="button" disabled={busy} aria-busy={busy} onClick={signOut}>Admin Sign out</button>:<a className="btn alt small admin-header" href="/admin-login">Admin Login</a>}{session.isAdmin&&createPortal(<><a href="/calendar/" className="nav-bookings">Events &amp; Booking</a><a className="nav-admin-console" href="/admin-login" aria-current={location.pathname==='/admin-login'?'page':undefined}>Admin Console</a></>,document.querySelector('#nav'))}{error&&<span role="alert" className="admin-header-error">{error}</span>}{location.pathname.replace(/\/$/,'')==='/admin-login'&&createPortal(<AdminLogin/>,document.querySelector('#admin-root'))}{location.pathname.replace(/\/$/,'')==='/enquiries'&&createPortal(<EnquiriesPage/>,document.querySelector('#enquiries-root'))}</>;
 }
 const adminHeader=document.querySelector('.admin-header');
 const sessionRoot=document.createElement('span');sessionRoot.className='admin-header-slot';

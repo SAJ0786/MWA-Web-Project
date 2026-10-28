@@ -3,6 +3,7 @@ import {CalendarDays,CalendarRange,UtensilsCrossed,HandHeart,Users,Workflow,Wren
 
 export const adminModules=[
  {name:'Events & Bookings Hub',icon:CalendarDays,description:'Manage bookings, venues and event requests.',href:'/calendar/?view=admin'},
+ {name:'Contact & Enquiries',icon:Megaphone,description:'Respond to community enquiries in a shared team inbox.',href:'/enquiries/'},
  {name:'Calendar Management',icon:CalendarRange,description:'Manage shared dates and monthly Hijri settings.',href:'/calendar-management/'},
  {name:'Niaz Administration',icon:UtensilsCrossed,description:'Coordinate Niaz arrangements and contributions.'},
  {name:'Volunteer Administration',icon:HandHeart,description:'Organise volunteer teams and responsibilities.'},

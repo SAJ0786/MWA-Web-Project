@@ -11,9 +11,10 @@ const origins=new Set(['https://mwa-community-web.web.app','https://mwa-communit
 async function editorFor(req){try{const match=/^Bearer (.+)$/.exec(req.get('Authorization')||'');if(!match)return null;const token=await getAuth().verifyIdToken(match[1],true);const user=await db.doc('users/'+token.uid).get();if(!user.exists||user.data().role!=='admin')return null;const auth=await db.doc('calendarSettings/auth').get();if(!sessionAllowed({provider:token.firebase?.sign_in_provider||'',passwordLoginDisabled:auth.exists&&auth.data().passwordLoginDisabled===true}))return null;return token}catch{return null}}
 exports.websiteCmsApi=onRequest({region:'australia-southeast1',maxInstances:3},async(req,res)=>{
  res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');
- const origin=req.get('Origin');if(origin&&origins.has(origin)){res.set('Access-Control-Allow-Origin',origin);res.set('Vary','Origin');res.set('Access-Control-Allow-Headers','Authorization, Content-Type');res.set('Access-Control-Allow-Methods','GET, PUT, OPTIONS')}
+ const origin=req.get('Origin');if(origin&&origins.has(origin)){res.set('Access-Control-Allow-Origin',origin);res.set('Vary','Origin');res.set('Access-Control-Allow-Headers','Authorization, Content-Type');res.set('Access-Control-Allow-Methods','GET, PUT, POST, PATCH, OPTIONS')}
  if(req.method==='OPTIONS')return res.status(origin&&origins.has(origin)?204:403).end();
  try{
+  if(/^\/api\/enquiries(?:\/|$)/.test(req.path))return require('./enquiries-api').handle(req,res,{db,getAuth,origins});
   const socialRoute=req.path.replace(/\/$/,'').endsWith('/social-moderation');
   if(socialRoute){
    const actor=await editorFor(req);if(!actor)return res.status(401).json({error:'Sign in with an approved MWA admin account.'});
@@ -42,3 +43,5 @@ transaction.set(db.collection('auditLog').doc(),{module:'website-cms',entityType
   return res.json({revision,updatedAt:timestamp});
  }catch{return res.status(503).json({error:'The website content store is unavailable. Your changes have not been published.'})}
 });
+
+exports.enquiriesMailWorker=require('firebase-functions/v2/scheduler').onSchedule({schedule:'every 2 minutes',region:'australia-southeast1',timeoutSeconds:240,maxInstances:1},()=>require('./enquiries-gmail').run(db));

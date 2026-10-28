@@ -65,6 +65,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /enquiries/{path=**} { allow read, write: if false; }
+    match /enquiryOutbox/{path=**} { allow read, write: if false; }
+    match /_enquiryPrivate/{path=**} { allow read, write: if false; }
+    match /_enquiryOAuthStates/{path=**} { allow read, write: if false; }
+    match /_enquiryMailThreads/{path=**} { allow read, write: if false; }
+    match /_enquiryMailMessages/{path=**} { allow read, write: if false; }
+    match /_enquiryRateLimits/{path=**} { allow read, write: if false; }
+
     // ── Audit log ────────────────────────────────────────────────────────────
     // Admin-only, and only ever written by Cloud Functions (Admin SDK).
     match /auditLog/{entryId} {
