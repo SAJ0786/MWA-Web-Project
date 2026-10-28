@@ -16,6 +16,8 @@ export function mountCalendarShell() {
  if(moduleView)query.set('view',moduleView);
  if(islamic)query.set('view','islamic-events');
  query.set('release', __MWA_BUILD_ID__);
+ const ready=event=>{if(event.origin===location.origin&&event.source===frame.contentWindow&&event.data?.type==='mwa-page-ready'){window.mwaPageReady?.();window.removeEventListener('message',ready);}};
+ window.addEventListener('message',ready);
  frame.src = '/calendar-app/' + (query.size?'?'+query.toString():'') + location.hash;
  main.append(frame);
  document.querySelector('#main').after(main);
