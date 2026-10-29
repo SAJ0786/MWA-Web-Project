@@ -37,3 +37,9 @@ References: [Google OAuth token lifetime](https://developers.google.com/identity
 Run the Node core tests with `node --test functions/enquiries.test.js functions/enquiries-oauth.test.js`. The transaction/OAuth tests require `FIRESTORE_EMULATOR_HOST`; never point them at production. Use the `demo-mwa-enquiries` project in a fresh Firestore emulator loaded with the calendar Firestore rules, then also run `node --test website/enquiries-rules.test.mjs`.
 
 The emulator suite verifies input/rate limiting, submission/reply idempotency, allowlist and password policy, stale writes, durable queued delivery, send reconciliation, reply deduplication, resolved reopening, spam suppression, mismatched senders, client-read/write denial, owner-only setup, secure OAuth cookies and state replay rejection. Full website and standalone/embedded calendar builds must pass. Live mailbox delivery remains an acceptance check after owner authorisation.
+
+## Custom website address and JSON upload (29 October 2026)
+
+The API now accepts the verified hosting domain `https://refreshed.muhammadiwelfare.org.au` as well as the Firebase website addresses. The file selector retains the selected JSON and displays upload success or failure beside it. A disabled Connect button means the server has not yet confirmed a saved configuration.
+
+Google OAuth still uses the callback registered in this guide at `mwa-community-web.web.app`. Starting Connect from the custom domain therefore first opens the Firebase website's Mailbox connection screen. Sign in there as the owner if prompted, then click Connect again. The saved configuration is shared; no second upload is required. Keeping the OAuth start and callback on the same host preserves the secure state cookie. Once connected, admins can use the custom domain normally.

@@ -7,7 +7,7 @@ const model=require('./content-model.json');
 const {sessionAllowed}=require('./adminAccess');
 const {sources,selectedPosts,setVisibility,cleanVisibility}=require('./socialModeration');
 initializeApp();const db=getFirestore();
-const origins=new Set(['https://mwa-community-web.web.app','https://mwa-community-web.firebaseapp.com','http://127.0.0.1:5174','http://localhost:5174']);
+const origins=new Set(['https://refreshed.muhammadiwelfare.org.au','https://mwa-community-web.web.app','https://mwa-community-web.firebaseapp.com','http://127.0.0.1:5174','http://localhost:5174']);
 async function editorFor(req){try{const match=/^Bearer (.+)$/.exec(req.get('Authorization')||'');if(!match)return null;const token=await getAuth().verifyIdToken(match[1],true);const user=await db.doc('users/'+token.uid).get();if(!user.exists||user.data().role!=='admin')return null;const auth=await db.doc('calendarSettings/auth').get();if(!sessionAllowed({provider:token.firebase?.sign_in_provider||'',passwordLoginDisabled:auth.exists&&auth.data().passwordLoginDisabled===true}))return null;return token}catch{return null}}
 exports.websiteCmsApi=onRequest({region:'australia-southeast1',maxInstances:3},async(req,res)=>{
  res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');
