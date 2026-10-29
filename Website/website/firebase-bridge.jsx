@@ -1,3 +1,4 @@
+import {normaliseTextSize,applyTextSize} from '../shared/text-size.js';
 import {mountCommunityCalendar} from './community-calendar.jsx';
 import {recordActivity} from '@calendar/services/auditService.js';
 import React,{useState,useEffect} from 'react';
@@ -18,7 +19,7 @@ import './website-polish.js';
 import './solar-panel.js';
 import {mountCalendarShell} from './calendar-shell.js';
 
-window.MWA_SCHEMES=schemes;
+window.MWA_SCHEMES=schemes;window.MWA_TEXT_SIZE={normalise:normaliseTextSize,apply:applyTextSize};
 let siteSettings=defaults;applyAppearance(siteSettings);
 let resolveAuth;const authReady=new Promise(resolve=>{resolveAuth=resolve});let initial=true;
 let resolveAdminReady;const adminReady=new Promise(resolve=>{resolveAdminReady=resolve});
