@@ -43,3 +43,7 @@ The emulator suite verifies input/rate limiting, submission/reply idempotency, a
 The API now accepts the verified hosting domain `https://refreshed.muhammadiwelfare.org.au` as well as the Firebase website addresses. The file selector retains the selected JSON and displays upload success or failure beside it. A disabled Connect button means the server has not yet confirmed a saved configuration.
 
 Google OAuth still uses the callback registered in this guide at `mwa-community-web.web.app`. Starting Connect from the custom domain therefore first opens the Firebase website's Mailbox connection screen. Sign in there as the owner if prompted, then click Connect again. The saved configuration is shared; no second upload is required. Keeping the OAuth start and callback on the same host preserves the secure state cookie. Once connected, admins can use the custom domain normally.
+
+## Enquiry list and conversation selection
+
+The conversation pane only displays the selected enquiry while it appears in the filtered list. Status filters, search and refreshed status changes clear a selection that no longer matches. An empty list shows an empty conversation state; returning to a broader filter does not automatically reopen a previous thread. Drafts hidden by filtering are retained in memory for this page session and restored when that enquiry is selected again (not saved across a page reload). Notification deep links start in All enquiries and include the linked thread even when it is older than the first loaded page.
