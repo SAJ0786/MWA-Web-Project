@@ -3,7 +3,7 @@ import {schemes,defaults,bookingTonePalette,bookingToneIndex,readableInk,contras
 
 export const W=864,H=1223,SCALE=3,MARGIN=36,BODY_BOTTOM=1128;
 export const SANS="'Segoe UI',system-ui,-apple-system,Arial,sans-serif";
-export const SITE='eventscalendar.muhammadiwelfare.org.au';
+export const SITE='refreshed.muhammadiwelfare.org.au/calendar/';
 export const text=value=>String(value??'').replace(/[\u2010-\u2015\u2212]/g,'-').replace(/\u00a0/g,' ');
 
 export function resolvePdfTheme(opts={}){

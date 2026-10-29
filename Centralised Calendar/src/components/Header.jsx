@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { CalendarDays, ListChecks, Plus, ShieldCheck, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import logoUrl from '../assets/mwa-logo.png';
-import AppearanceControl from './AppearanceControl.jsx';
+import AppearanceSync from './AppearanceSync.jsx';
 import { defaults } from '@mwa/appearance';
 
 export default function Header({ tab, setTab, onNewBooking }) {
   const { user, isAdmin, logout } = useAuth();
   const embedded=window.self!==window.top;
   const [brandLogo,setBrandLogo]=useState(defaults.logo||logoUrl);
-  if(['calendar-management','tools'].includes(tab) || (embedded && new URLSearchParams(window.location.search).get('view')==='islamic-events'))return <div hidden><AppearanceControl/></div>;
+  if(['calendar-management','tools'].includes(tab) || (embedded && new URLSearchParams(window.location.search).get('view')==='islamic-events'))return <div hidden><AppearanceSync/></div>;
   const navBtn = (id, label, Icon) => (
     <button type="button" className={`lb lb-nav ${tab === id ? 'nav-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}><Icon />{label}</button>
   );
@@ -25,7 +25,7 @@ export default function Header({ tab, setTab, onNewBooking }) {
         {isAdmin && navBtn('admin', 'Admin', ShieldCheck)}
       </nav>
       <div className="header-actions">
-        <AppearanceControl onBrandChange={setBrandLogo}/>
+        <AppearanceSync onBrandChange={setBrandLogo}/>
         <button type="button" className="lb lb-default" onClick={onNewBooking}><Plus />New booking</button>
         {!embedded && (user && isAdmin ? (
           <button type="button" className="lb lb-outline" onClick={logout} title={`Signed in as ${user.email}`} aria-label={`Sign out (${user.email})`}><LogOut />Sign out</button>

@@ -48,3 +48,11 @@ Directory, monthly Hijri and Key Islamic Event mutations use authenticated calla
 Audit Log filters by user (partial email or exact ID), inclusive Sydney date range and module, with before/after details. The protected `getAuditEntries` endpoint scans timestamp-ordered batches so historical logs without a module field remain searchable. A request returns up to 50 matches after scanning at most 1,000 records; Load older activity continues from the last scanned record even when a batch has no matches. No compound index or live-data migration is needed. Future modules must use the shared server audit schema and transactional writes when they become live; their filter labels are already reserved.
 
 Validation: 154 calendar/backend checks and five CMS checks passed, plus Firestore emulator permission checks, concurrent month transactions and a 70-entry pagination/filter integration check. Isolated layout reviews use synthetic accounts only; no production booking, Hijri override or admin-team membership was changed for testing. All five new deployed callables and CMS reject anonymous changes/history access. Deploy new endpoints and the CMS before hosting; publish calendar Firestore rules after the new UI.
+
+### Calendar access and Appearance
+
+The calendar is published only inside the website at `/calendar/`. The website header contains the single Appearance panel; the embedded calendar follows its preferences through `AppearanceSync`.
+
+The old calendar Hosting target publishes `calendar-redirect/`, not an application bundle. It forwards visitors to `https://refreshed.muhammadiwelfare.org.au/calendar/`, preserving query strings and fragments and mapping module entry links. Existing `/v1/**` API and `/ical` subscription rewrites are retained. Keep the legacy domain connected so old bookmarks forward correctly.
+
+Run `npm run deploy` here to build and deploy the website, embedded calendar and legacy forwarding page. `node --test calendar-entry.test.mjs` checks the forwarding routes.

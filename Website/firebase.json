@@ -57,7 +57,7 @@
     },
     {
       "target": "calendar",
-      "public": "calendar-dist",
+      "public": "calendar-redirect",
       "ignore": [
         "firebase.json",
         "**/.*",
@@ -90,15 +90,6 @@
             {
               "key": "Cache-Control",
               "value": "no-cache"
-            }
-          ]
-        },
-        {
-          "source": "**/*.@(js|css|svg|png|jpg|jpeg|webp)",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "public,max-age=31536000,immutable"
             }
           ]
         }
