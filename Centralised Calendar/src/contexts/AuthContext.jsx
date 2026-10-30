@@ -33,6 +33,7 @@ export function AuthProvider({ children }) {
   const [pendingLink, setPendingLink] = useState(null);
   const syncedUid = useRef(null);
   const linking = useRef(false);
+  const hadSession = useRef(false);
 
   useEffect(() => {
     if (!firebaseConfigured) {
@@ -40,7 +41,9 @@ export function AuthProvider({ children }) {
       return;
     }
     const unsubAuth = onAuthStateChanged(auth, (u) => {
+      const signedOut = hadSession.current && !u;
       setUser(u);setProfile(null);setLoading(!!u);
+      if(signedOut){hadSession.current=false;window.top.location.replace("/");}
       if (!u) {
         syncedUid.current = null;
         setProfile(null);
@@ -159,10 +162,24 @@ export function AuthProvider({ children }) {
   };
 
   const cancelGoogleLink = () => setPendingLink(null);
-  const logout = async () => {await recordActivity('tools-automation','session.signout');return signOut(auth);};
+  const clearAdminWorkspace=()=>{setUser(null);setProfile(null);setTeamState({email:'',entry:null});setPendingLink(null);setLoading(false);};
+  useEffect(()=>{
+    const receiveSignOut=event=>{if(event.key!=='mwa-admin-signout'||!event.newValue)return;clearAdminWorkspace();signOut(auth).then(()=>window.top.location.replace('/')).catch(()=>window.top.location.replace('/'));};
+    window.addEventListener('storage',receiveSignOut);
+    return()=>window.removeEventListener('storage',receiveSignOut);
+  },[]);
+  const logout = async () => {
+    // Audit delivery must never delay or prevent ending the session.
+    void recordActivity('tools-automation','session.signout').catch(()=>{});
+    clearAdminWorkspace();
+    try{localStorage.setItem('mwa-admin-signout',Date.now()+'-'+Math.random());}catch{}
+    await signOut(auth);
+    window.top.location.replace('/');
+  };
   const ownerIdentity=!!user?.emailVerified&&email===OWNER_EMAIL;
   const provider=user?.providerData?.some(p=>p.providerId==='google.com')?'google.com':'password';
   const isAdmin=profile?.role==='admin' && (ownerIdentity||!!teamEntry) && !(passwordLoginDisabled&&provider==='password');
+  if(isAdmin)hadSession.current=true;
   const isOwner=isAdmin&&ownerIdentity;
   const accessExpired=!isOwner&&!accessActive(teamEntry);
   const modules=permittedModules(email,teamEntry,isAdmin);
