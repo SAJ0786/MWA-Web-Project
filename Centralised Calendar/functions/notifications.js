@@ -62,7 +62,7 @@ function render({ heading, intro, rows = [], extra = [], footerNote = '', action
     heading, '', intro, '',
     ...rows.map(([k, v]) => `${k}: ${v}`),
     ...(extra.length ? ['', ...extra] : []),
-    ...(actions?['',actions.approve?'Approve request: '+actions.approve:'Approve unavailable: this request has a conflict.','Reject request: '+actions.reject,'Sign in with Events & Bookings access and confirm your decision.']:[]),
+    ...(actions?['',actions.approve?'Approve request: '+actions.approve:'Approve unavailable: this request has a conflict.','Reject request: '+actions.reject,'Open the link and confirm your decision. New email links require no sign-in and expire after 48 hours.']:[]),
     '', footerNote || `Live calendar: ${SITE_URL}`,
     '', ORG_NAME, '81-89 Clifton Avenue, Kemps Creek NSW 2178'
   ].join('\n');
@@ -73,7 +73,7 @@ function render({ heading, intro, rows = [], extra = [], footerNote = '', action
 <tr><td style="padding:22px 24px 8px"><h2 style="margin:0 0 10px;font-size:20px;color:${GREEN}">${esc(heading)}</h2><p style="margin:0 0 14px;line-height:1.5">${esc(intro)}</p>
 ${rows.length ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:14px">${rows.map(([k, v]) => `<tr><td style="padding:6px 10px 6px 0;color:#555;white-space:nowrap;vertical-align:top;border-bottom:1px solid #e3efe7">${esc(k)}</td><td style="padding:6px 0;border-bottom:1px solid #e3efe7;font-weight:600">${esc(v)}</td></tr>`).join('')}</table>` : ''}
 ${extra.map(l => `<p style="margin:12px 0 0;line-height:1.5">${esc(l)}</p>`).join('')}
-${actions?`<p style="margin:22px 0 12px">${actions.approve?`<a href="${esc(actions.approve)}" style="display:inline-block;background:#176446;color:white;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600">Approve request</a>`:`<span aria-disabled="true" style="display:inline-block;background:#e6e8e7;color:#69736d;padding:12px 20px;border-radius:6px">Approve unavailable — conflict</span>`} &nbsp; <a href="${esc(actions.reject)}" style="display:inline-block;background:#fff;color:#813e3e;border:1px solid #c9b3b3;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600">Reject request</a></p><p style="font-size:12px;color:#666;line-height:1.5">Sign in with Events &amp; Bookings access and confirm your decision. Availability is checked again before approval.</p>`:''}
+${actions?`<p style="margin:22px 0 12px">${actions.approve?`<a href="${esc(actions.approve)}" style="display:inline-block;background:#176446;color:white;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600">Approve request</a>`:`<span aria-disabled="true" style="display:inline-block;background:#e6e8e7;color:#69736d;padding:12px 20px;border-radius:6px">Approve unavailable — conflict</span>`} &nbsp; <a href="${esc(actions.reject)}" style="display:inline-block;background:#fff;color:#813e3e;border:1px solid #c9b3b3;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600">Reject request</a></p><p style="font-size:12px;color:#666;line-height:1.5">Open the link and confirm your decision. New email links require no sign-in, expire after 48 hours and work once. Availability is checked again before approval.</p>`:''}
 
 </td></tr>
 <tr><td style="padding:18px 24px 22px;font-size:12px;color:#6d6d6d;border-top:2px solid ${GREEN}">${esc(footerNote || 'Program dates may change based on moonsighting. Please check the live calendar at')} <a href="${SITE_URL}" style="color:${GREEN};font-weight:700">Open MWA calendar</a><br>${ORG_NAME} \u00b7 81-89 Clifton Avenue, Kemps Creek NSW 2178</td></tr>
@@ -100,7 +100,7 @@ function submissionAdmin(e, hijri, overlaps = []) {
     : [];
   const blocked=overlaps.length>0||e.hasConflict===true;
   if(blocked&&!overlaps.length)extra.push('This request has a conflict. Approval from this email is unavailable.');
-  const actionUrl=decision=>SITE_URL+'?booking='+encodeURIComponent(e.id)+'&decision='+decision;
+  const actionUrl=decision=>e.emailActions?.[decision]||SITE_URL+'?booking='+encodeURIComponent(e.id)+'&decision='+decision;
   const actions=e.id?{approve:blocked?null:actionUrl('approve'),reject:actionUrl('reject')}:null;
   extra.push(`Review it in the admin calendar: ${SITE_URL}`);
   return mail(ADMIN_TO, `${overlaps.length ? '\u26A0 Overlap \u2013 ' : ''}New booking request: ${e.title}`, render({

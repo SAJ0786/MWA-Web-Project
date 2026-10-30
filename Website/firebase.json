@@ -10,6 +10,13 @@
       ],
       "rewrites": [
         {
+          "source": "/booking-response",
+          "function": {
+            "functionId": "bookingEmailAction",
+            "region": "australia-southeast1"
+          }
+        },
+        {
           "source": "/api/**",
           "function": {
             "functionId": "websiteCmsApi",

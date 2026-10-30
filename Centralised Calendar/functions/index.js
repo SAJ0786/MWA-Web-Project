@@ -316,10 +316,11 @@ exports.submitBooking = onCall({ cors: true, secrets: emailSecrets }, async (req
   // Best-effort notifications (docs/NOTIFICATIONS.md rows 1, 2, 8); never block or fail the request.
   const saved = (await eventRef.get()).data() || {};
   const hijri = hijriInfoFor(dateKeyOf(saved.startAt), overrides);
+  const emailActions=submitterIsAdmin?null:await require('./emailBookingLink').issueLink(db,eventRef.id,saved);
   await sendAll([
     notify.submissionRequester(saved, hijri),
     // Admin-entered bookings don't alert the admin inbox about themselves.
-    submitterIsAdmin ? null : notify.submissionAdmin({...saved,id:eventRef.id}, hijri, overlapDetails)
+    submitterIsAdmin ? null : notify.submissionAdmin({...saved,id:eventRef.id,emailActions}, hijri, overlapDetails)
   ]);
 
   return { id: eventRef.id, hasConflict, status: 'pending' };
@@ -1172,3 +1173,5 @@ Object.assign(exports,require('./auditedAdmin').register({db,onCall,HttpsError,r
 Object.assign(exports,require('./teamPermissions').register({db,onCall,HttpsError,requireAdmin}));
 
 Object.assign(exports,require('./bookingEmailDecision').register({db,onCall,HttpsError,requireAdmin,FieldValue,emailSecrets,findOverlaps,recomputeVenueConflicts,sendAll,notify,getHijriOverrides,hijriInfoFor,dateKeyOf,logger}));
+
+Object.assign(exports,require('./emailBookingLink').register({db,onRequest,FieldValue,emailSecrets,findOverlaps,recomputeVenueConflicts,sendAll,notify,getHijriOverrides,hijriInfoFor,dateKeyOf,logger}));

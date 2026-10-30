@@ -6,7 +6,7 @@ import {watchAdminTeam,addAdminEmail,removeAdminEmail,setAdminModules} from '../
 import AdminAccessEditor from './AdminAccessEditor.jsx';
 export default function TeamTab({currentEmail,canManage}){
  const session=useAuth();
- const canEdit=canEdit&&session.isOwner;
+ const canEdit=canManage&&session.isOwner;
  const [team,setTeam]=useState(null),[editing,setEditing]=useState(null),[busy,setBusy]=useState(''),[msg,setMsg]=useState(null);
  useEffect(()=>watchAdminTeam(setTeam,()=>setMsg({err:true,text:'Could not load the admin list.'})),[]);
  useEffect(()=>{if(!canEdit)setEditing(null)},[canEdit]);
