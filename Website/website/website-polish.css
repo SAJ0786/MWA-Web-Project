@@ -47,3 +47,4 @@ html{scroll-padding-top:calc(var(--mwa-chrome-height,200px) + 24px)}
 @media(max-width:400px){.prayer-card{--prayer-time-size:clamp(15px,4.5vw,17px)}.prayer-card .decorative-times>div,.prayer-card .decorative-times>div:first-child{padding-left:4px;padding-right:4px}}
 
 .mwa-text-size-slider{display:flex;align-items:center;gap:12px}.mwa-text-size-slider input[type=range]{flex:1;min-width:0;width:0}.mwa-text-size-slider>span{flex-shrink:0;font-weight:600;line-height:1;color:var(--accent)}.mwa-text-size-small{font-size:14px}.mwa-text-size-large{font-size:24px}
+.garden .hero-art .hero-photo{width:100%;height:100%;object-fit:cover;object-position:50% 50%}
