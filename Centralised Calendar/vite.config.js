@@ -10,7 +10,7 @@ const sharedAppearance=existsSync(path.resolve(directory,'../shared/appearance.j
 export default defineConfig({
   plugins: [react(),textSizeHtml()],
   css:{postcss:{plugins:[textSizeCss()]}},
-  resolve:{alias:{'@mwa/appearance':sharedAppearance,'@mwa/calendar-entry':path.resolve(directory,'../Website/calendar-redirect/entry.js')},dedupe:['react','react-dom','firebase']},
+  resolve:{alias:{'@mwa/appearance':sharedAppearance,'@mwa/access':path.resolve(directory,'../Website/shared/module-access.js'),'@mwa/calendar-entry':path.resolve(directory,'../Website/calendar-redirect/entry.js')},dedupe:['react','react-dom','firebase']},
   build: {
     outDir: 'dist',
     emptyOutDir: true,

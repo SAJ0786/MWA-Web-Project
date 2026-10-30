@@ -1,3 +1,4 @@
+import {permittedModules,accessActive} from '@mwa/access';
 import {recordActivity} from '../services/auditService.js';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
@@ -21,6 +22,8 @@ const DENIED_MESSAGES = {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [teamState,setTeamState]=useState({email:'',entry:null});
+  const [clock,setClock]=useState(Date.now());
   const [profile, setProfile] = useState(null); // users/{uid} doc, has .role
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -37,7 +40,7 @@ export function AuthProvider({ children }) {
       return;
     }
     const unsubAuth = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+      setUser(u);setProfile(null);setLoading(!!u);
       if (!u) {
         syncedUid.current = null;
         setProfile(null);
@@ -88,6 +91,19 @@ export function AuthProvider({ children }) {
     return unsub;
   }, [user]);
 
+  const email=(user?.email||'').toLowerCase();
+  useEffect(()=>{
+    if(!user||!email)return;
+    return onSnapshot(doc(db,'adminAllowlist',email),snap=>setTeamState({email,entry:snap.exists()?snap.data():null}),()=>setTeamState({email,entry:null}));
+  },[user?.uid,email]);
+  const teamEntry=teamState.email===email?teamState.entry:null;
+  useEffect(()=>{
+    const raw=teamEntry?.accessExpiresAt;
+    const until=raw?.toMillis?raw.toMillis():new Date(raw).getTime();
+    if(!raw||!Number.isFinite(until)||until<=Date.now())return;
+    const timer=setTimeout(()=>setClock(Date.now()),Math.min(2147483647,until-Date.now()+20));
+    return()=>clearTimeout(timer);
+  },[teamEntry,clock]);
   const login = (email, password) => {
     setAuthError('');
     return signInWithEmailAndPassword(auth, email, password);
@@ -144,12 +160,17 @@ export function AuthProvider({ children }) {
 
   const cancelGoogleLink = () => setPendingLink(null);
   const logout = async () => {await recordActivity('tools-automation','session.signout');return signOut(auth);};
-  const isAdmin = profile?.role === 'admin';
-  const isOwner = !!user && (user.email || '').toLowerCase() === OWNER_EMAIL;
+  const ownerIdentity=!!user?.emailVerified&&email===OWNER_EMAIL;
+  const provider=user?.providerData?.some(p=>p.providerId==='google.com')?'google.com':'password';
+  const isAdmin=profile?.role==='admin' && (ownerIdentity||!!teamEntry) && !(passwordLoginDisabled&&provider==='password');
+  const isOwner=isAdmin&&ownerIdentity;
+  const accessExpired=!isOwner&&!accessActive(teamEntry);
+  const modules=permittedModules(email,teamEntry,isAdmin);
+  const canAccess=id=>modules.includes(id);
 
   return (
     <AuthContext.Provider value={{
-      user, profile, isAdmin, isOwner, loading: loading || syncing, login, loginWithGoogle, logout, authError,
+      user, profile, isAdmin, isOwner, modules, canAccess, accessExpired, accessExpiryDate:teamEntry?.accessExpiryDate||null, loading: loading || syncing || (!!user&&teamState.email!==email), login, loginWithGoogle, logout, authError,
       passwordLoginDisabled, pendingLink, completeGoogleLink, cancelGoogleLink
     }}>
       {children}

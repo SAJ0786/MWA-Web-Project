@@ -1,0 +1,84 @@
+{
+  "modules": [
+    {
+      "id": "events-bookings",
+      "name": "Events & Bookings Hub",
+      "live": true
+    },
+    {
+      "id": "enquiries",
+      "name": "Contact & Enquiries",
+      "live": true
+    },
+    {
+      "id": "calendar-management",
+      "name": "Calendar Management",
+      "live": true
+    },
+    {
+      "id": "niaz",
+      "name": "Niaz Administration",
+      "live": false
+    },
+    {
+      "id": "volunteers",
+      "name": "Volunteer Administration",
+      "live": false
+    },
+    {
+      "id": "members",
+      "name": "Member Administration",
+      "live": false
+    },
+    {
+      "id": "tools-automation",
+      "name": "Tools & Automation",
+      "live": true
+    },
+    {
+      "id": "maintenance",
+      "name": "Maintenance Administration",
+      "live": false
+    },
+    {
+      "id": "expenses",
+      "name": "Expense Administration",
+      "live": false
+    },
+    {
+      "id": "donations",
+      "name": "Donation Administration",
+      "live": false
+    },
+    {
+      "id": "social-media",
+      "name": "Social Media Administration",
+      "live": false
+    },
+    {
+      "id": "speakers-reciters",
+      "name": "Speakers & Reciters",
+      "live": false
+    },
+    {
+      "id": "website-cms",
+      "name": "Website CMS",
+      "live": true
+    }
+  ],
+  "legacyModules": [
+    "events-bookings",
+    "enquiries",
+    "calendar-management",
+    "niaz",
+    "volunteers",
+    "members",
+    "tools-automation",
+    "maintenance",
+    "expenses",
+    "donations",
+    "social-media",
+    "speakers-reciters",
+    "website-cms"
+  ]
+}

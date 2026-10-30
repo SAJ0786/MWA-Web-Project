@@ -1,3 +1,4 @@
+import BookingEmailAction from './components/BookingEmailAction.jsx';
 import {CalendarManagement,ToolsAutomation} from './pages/ModulePages.jsx';
 import {recordActivity} from './services/auditService.js';
 import { useEffect, useState } from 'react';
@@ -15,7 +16,8 @@ import BookingModal from './components/BookingModal.jsx';
 import IslamicEventsPage from './pages/IslamicEventsPage.jsx';
 
 export default function App() {
-  const { isAdmin } = useAuth();
+  const {canAccess}=useAuth();
+  const isAdmin=canAccess('events-bookings');
   const entryView=new URLSearchParams(window.location.search).get('view');
   const moduleView=['calendar-management','tools'].includes(entryView);
   const [tab, setTab] = useState(()=>['calendar-management','tools','islamic-events'].includes(entryView)?entryView:'calendar');
@@ -61,6 +63,7 @@ export default function App() {
 
   useEffect(()=>{if(isAdmin)recordActivity(tab==='tools'?'tools-automation':tab==='calendar-management'?'calendar-management':tab==='islamic-events'?'islamic-events':'events-bookings','module.opened',tab);},[tab,isAdmin]);
 
+  useEffect(()=>{if(!isAdmin){setEvents([]);setNewBooking(null);setTab(current=>current==='admin'?'calendar':current)}},[isAdmin]);
   const reloadPublic = () => setPublicLoadTick(t => t + 1);
 
   if (!firebaseConfigured) {
@@ -80,7 +83,7 @@ export default function App() {
     <div className="calendar-app">
       <div className="app-container">
         <Header tab={tab} setTab={setTab} onNewBooking={() => setNewBooking({ date: null })} />
-        <main>
+        <main><BookingEmailAction/>
           {tab === 'calendar-management' && <CalendarManagement hijriOverrides={hijriOverrides} onReloadSettings={()=>getHijriSettings().then(s=>setHijriOverrides(s.overrides||[]))}/>}
           {tab === 'tools' && <ToolsAutomation/>}
           {tab === 'islamic-events' && <IslamicEventsPage hijriOverrides={hijriOverrides} />}

@@ -9,7 +9,8 @@ import {
 } from '../utils/islamicEvents.js';
 
 export default function IslamicEventsPage({ hijriOverrides }) {
-  const { user, isAdmin } = useAuth();
+  const {user,canAccess}=useAuth();
+  const isAdmin=canAccess('calendar-management');
   const [today, setToday] = useState(() => new Date());
   const currentHijri = getTodayHijriParts(hijriOverrides, today);
   const currentYear = currentHijri.year;

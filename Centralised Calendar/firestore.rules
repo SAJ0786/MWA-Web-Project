@@ -10,20 +10,25 @@ service cloud.firestore {
         || !exists(/databases/$(database)/documents/calendarSettings/auth)
         || get(/databases/$(database)/documents/calendarSettings/auth).data.get('passwordLoginDisabled', false) != true;
     }
-    function isAdmin()   { return signedIn() && userDoc().data.role == 'admin' && passwordSessionAllowed(); }
+    function adminEmail(){return request.auth.token.email.lower();}
+    function owner(){return request.auth.token.email_verified == true && adminEmail() == 'admin@muhammadiwelfare.org.au';}
+    function teamEntry(){return get(/databases/$(database)/documents/adminAllowlist/$(adminEmail()));}
+    function accessActive(){return teamEntry().data.get('accessExpiresAt', null) == null || request.time < teamEntry().data.accessExpiresAt;}
+    function isAdmin(){return signedIn() && userDoc().data.role == 'admin' && passwordSessionAllowed() && (owner() || (exists(/databases/$(database)/documents/adminAllowlist/$(adminEmail())) && accessActive()));}
+    function hasModule(moduleId){return isAdmin() && (owner() || moduleId in teamEntry().data.get('modules', ["events-bookings", "enquiries", "calendar-management", "niaz", "volunteers", "members", "tools-automation", "maintenance", "expenses", "donations", "social-media", "speakers-reciters", "website-cms"]));}
 
     // ── Users ────────────────────────────────────────────────────────────────
     // users/{uid}.role is managed only by Cloud Functions (syncAdminAccess /
     // removeAdminEmail) from the adminAllowlist, so nobody can self-assign a role.
     match /users/{userId} {
-      allow read:  if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow read:  if signedIn() && (request.auth.uid == userId || hasModule('tools-automation'));
       allow write: if false;
     }
 
     // ── Admin team allowlist ────────────────────────────────────────────────
     // Source of truth for who may be an admin. Admin read; writes via functions only.
     match /adminAllowlist/{email} {
-      allow read:  if isAdmin();
+      allow read:  if signedIn() && (adminEmail() == email || hasModule('tools-automation'));
       allow write: if false;
     }
 
@@ -36,7 +41,7 @@ service cloud.firestore {
     //    the /v1/events REST endpoint, which returns only public+confirmed
     //    fields with private contact/notes stripped out.
     match /events/{eventId} {
-      allow read:  if isAdmin();
+      allow read:  if hasModule('events-bookings');
       allow write: if false; // writes only via Cloud Functions (Admin SDK)
     }
 
@@ -76,7 +81,7 @@ service cloud.firestore {
     // ── Audit log ────────────────────────────────────────────────────────────
     // Admin-only, and only ever written by Cloud Functions (Admin SDK).
     match /auditLog/{entryId} {
-      allow read:  if isAdmin();
+      allow read:  if hasModule('tools-automation');
       allow write: if false;
     }
   }

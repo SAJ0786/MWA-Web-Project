@@ -14,8 +14,8 @@ export function watchAdminTeam(callback, onError) {
   return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))), onError);
 }
 
-export async function addAdminEmail(email) {
-  const res = await httpsCallable(functions, 'addAdminEmail')({ email });
+export async function addAdminEmail(email,modules,expiryDate) {
+  const res = await httpsCallable(functions, 'addAdminEmail')({ email,modules,expiryDate });
   return res.data;
 }
 
@@ -23,3 +23,5 @@ export async function removeAdminEmail(email) {
   const res = await httpsCallable(functions, 'removeAdminEmail')({ email });
   return res.data;
 }
+
+export async function setAdminModules(email,modules,expiryDate,revision){return (await httpsCallable(functions,'setAdminModules')({email,modules,expiryDate,revision})).data;}

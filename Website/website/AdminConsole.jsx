@@ -1,3 +1,5 @@
+import {ADMIN_MODULES} from '@mwa/access';
+import {useAuth} from '@calendar/contexts/AuthContext.jsx';
 import React from 'react';
 import {CalendarDays,CalendarRange,UtensilsCrossed,HandHeart,Users,Workflow,Wrench,Receipt,HeartHandshake,Megaphone,MicVocal,PanelsTopLeft,ArrowUpRight} from 'lucide-react';
 
@@ -18,12 +20,16 @@ export const adminModules=[
 ];
 
 export default function AdminConsole({email}){
+ const {canAccess,accessExpired,accessExpiryDate}=useAuth();
  return <section className="admin-console" aria-labelledby="admin-console-title">
   <div className="admin-console-intro"><div className="eyebrow">MWA · ADMINISTRATION</div><h1 id="admin-console-title">Welcome to Admin Console.</h1><p>Manage MWA’s services and website from one place.</p><span className="admin-console-account">Signed in as {email}</span></div>
-  <div className="admin-module-grid">{adminModules.map(({name,icon:Icon,description,href})=>{
+  {accessExpired?<p role="status">Your admin module access has expired. Contact the account owner to renew it.</p>:accessExpiryDate&&<p>Access expires at the end of {accessExpiryDate} (Sydney time).</p>}
+  <div className="admin-module-grid">{adminModules.map(({name,icon:Icon,description,href},index)=>{
+   const allowed=canAccess(ADMIN_MODULES[index].id);const live=!!href;
+   if(!allowed)href=null;
    const Tag=href?'a':'article';
    return <Tag key={name} {...(href?{href}:{})} className={'admin-module'+(href?' is-live':' is-planned')}>
-    <div className="admin-module-top"><span className="admin-module-icon"><Icon aria-hidden="true"/></span><span className="admin-module-status">{href?'Live':'Coming soon'}</span></div>
+    <div className="admin-module-top"><span className="admin-module-icon"><Icon aria-hidden="true"/></span><span className="admin-module-status">{!allowed?'Access not assigned':live?'Live':'Coming soon'}</span></div>
     <h2>{name}{href&&<ArrowUpRight aria-hidden="true"/>}</h2><p>{description}</p>
    </Tag>;
   })}</div>

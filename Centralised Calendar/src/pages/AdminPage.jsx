@@ -12,7 +12,8 @@ import { useBookingDeletion } from '../components/useBookingDeletion.jsx';
 
 export default function AdminPage({ events, venues, departments, hijriOverrides, onSaved, onReloadSettings }) {
   const auth = useAuth();
-  const { user, profile, isAdmin, isOwner, loading } = auth;
+  const {user,profile,isOwner,loading}=auth;
+  const isAdmin=auth.canAccess('events-bookings');
   const [sub, setSub] = useState('pending');
 
   if (loading) return <section><p className="muted">Loading…</p></section>;

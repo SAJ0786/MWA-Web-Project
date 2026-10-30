@@ -1,3 +1,4 @@
+const {resolveAdmin}=require('./moduleAccess');
 const {initializeApp}=require('firebase-admin/app');
 const {getFirestore}=require('firebase-admin/firestore');
 const {getAuth}=require('firebase-admin/auth');
@@ -8,7 +9,8 @@ const {sessionAllowed}=require('./adminAccess');
 const {sources,selectedPosts,setVisibility,cleanVisibility}=require('./socialModeration');
 initializeApp();const db=getFirestore();
 const origins=new Set(['https://refreshed.muhammadiwelfare.org.au','https://mwa-community-web.web.app','https://mwa-community-web.firebaseapp.com','http://127.0.0.1:5174','http://localhost:5174']);
-async function editorFor(req){try{const match=/^Bearer (.+)$/.exec(req.get('Authorization')||'');if(!match)return null;const token=await getAuth().verifyIdToken(match[1],true);const user=await db.doc('users/'+token.uid).get();if(!user.exists||user.data().role!=='admin')return null;const auth=await db.doc('calendarSettings/auth').get();if(!sessionAllowed({provider:token.firebase?.sign_in_provider||'',passwordLoginDisabled:auth.exists&&auth.data().passwordLoginDisabled===true}))return null;return token}catch{return null}}
+async function editorFor(req,moduleId='website-cms'){try{const match=/^Bearer (.+)$/.exec(req.get('Authorization')||'');if(!match)return null;const token=await getAuth().verifyIdToken(match[1],true);return await resolveAdmin(db,token.uid,token,moduleId)}catch{return null}}
+
 exports.websiteCmsApi=onRequest({region:'australia-southeast1',maxInstances:3},async(req,res)=>{
  res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');
  const origin=req.get('Origin');if(origin&&origins.has(origin)){res.set('Access-Control-Allow-Origin',origin);res.set('Vary','Origin');res.set('Access-Control-Allow-Headers','Authorization, Content-Type');res.set('Access-Control-Allow-Methods','GET, PUT, POST, PATCH, OPTIONS')}
@@ -17,7 +19,7 @@ exports.websiteCmsApi=onRequest({region:'australia-southeast1',maxInstances:3},a
   if(/^\/api\/enquiries(?:\/|$)/.test(req.path))return require('./enquiries-api').handle(req,res,{db,getAuth,origins});
   const socialRoute=req.path.replace(/\/$/,'').endsWith('/social-moderation');
   if(socialRoute){
-   const actor=await editorFor(req);if(!actor)return res.status(401).json({error:'Sign in with an approved MWA admin account.'});
+   const actor=await editorFor(req,'tools-automation');if(!actor)return res.status(401).json({error:'Sign in with an approved MWA admin account.'});
    if(req.method==='GET'){const [content,moderation]=await Promise.all([db.doc('websiteContent/main').get(),db.doc('calendarSettings/socialModeration').get()]);const hidden=moderation.exists?moderation.data().hiddenPostIds||[]:[];const posts=selectedPosts(content.exists?content.data().document?.content:model.defaults.content).map(post=>({...post,hidden:hidden.includes(post.id)}));return res.json({sources,posts});}
    if(req.method!=='PUT')return res.status(405).json({error:'Method not allowed.'});
    if(!origin||!origins.has(origin))return res.status(403).json({error:'Request origin is not allowed.'});

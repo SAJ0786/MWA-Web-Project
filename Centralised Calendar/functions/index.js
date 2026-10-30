@@ -1,3 +1,4 @@
+const {resolveAdmin}=require('./moduleAccess');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getAuth } = require('firebase-admin/auth');
@@ -51,23 +52,13 @@ async function sessionPermitted(token) {
   return sessionAllowed({ provider, passwordLoginDisabled: await isPasswordLoginDisabled() });
 }
 
-async function requireAdmin(auth) {
-  if (!auth) throw new HttpsError('unauthenticated', 'Sign in as an admin to perform this action.');
-  const snap = await db.collection('users').doc(auth.uid).get();
-  const role = snap.exists ? snap.data().role : null;
-  if (role !== 'admin') throw new HttpsError('permission-denied', 'Admin role required.');
-  if (!(await sessionPermitted(auth.token))) throw new HttpsError('permission-denied', 'Email/password sign-in is turned off. Sign in with Google.');
-  return { uid: auth.uid, email: auth.token.email || snap.data()?.email || '' };
+async function requireAdmin(auth,moduleId='events-bookings') {
+ if(!auth)throw new HttpsError('unauthenticated','Sign in as an admin to perform this action.');
+ const actor=await resolveAdmin(db,auth.uid,auth.token,moduleId);
+ if(!actor)throw new HttpsError('permission-denied','You do not have access to this admin module.');
+ return actor;
 }
-
-/** Non-throwing admin check — used where a submission may come from either a
- * signed-in admin (who gets an explicit visibility choice) or the public
- * (whose submissions default to a different visibility). */
-async function isSubmitterAdmin(auth) {
-  if (!auth) return false;
-  const snap = await db.collection('users').doc(auth.uid).get();
-  return snap.exists && snap.data().role === 'admin' && await sessionPermitted(auth.token);
-}
+async function isSubmitterAdmin(auth){return !!(auth&&await resolveAdmin(db,auth.uid,auth.token,'events-bookings'));}
 
 function sanitizeTimeMode(value) {
   return value === 'allDay' || value === 'allNight' ? value : 'custom';
@@ -328,7 +319,7 @@ exports.submitBooking = onCall({ cors: true, secrets: emailSecrets }, async (req
   await sendAll([
     notify.submissionRequester(saved, hijri),
     // Admin-entered bookings don't alert the admin inbox about themselves.
-    submitterIsAdmin ? null : notify.submissionAdmin(saved, hijri, overlapDetails)
+    submitterIsAdmin ? null : notify.submissionAdmin({...saved,id:eventRef.id}, hijri, overlapDetails)
   ]);
 
   return { id: eventRef.id, hasConflict, status: 'pending' };
@@ -815,13 +806,15 @@ exports.syncAdminAccess = onCall({ cors: true }, async (request) => {
   const displayName = auth.token.name || '';
 
   if (decision.action === 'grant' || decision.action === 'migrate') {
-    await userRef.set({ role: 'admin', email, displayName, allowlistManaged: true, lastSignInAt: now, lastSignInProvider: provider }, { merge: true });
-    const listRef = db.collection('adminAllowlist').doc(email);
-    if (decision.action === 'migrate' || !(listSnap && listSnap.exists)) {
-      await listRef.set({ email, addedBy: decision.owner ? 'account owner' : 'existing admin (migrated)', addedAt: now, uid: auth.uid, displayName, lastSignInAt: now });
-    } else {
-      await listRef.set({ uid: auth.uid, displayName, lastSignInAt: now }, { merge: true });
-    }
+    const listRef=db.collection('adminAllowlist').doc(email);
+    await db.runTransaction(async tx=>{
+      const [freshList,freshUser]=await Promise.all([tx.get(listRef),tx.get(userRef)]);
+      const current=decideSignIn({email,emailVerified,provider,passwordLoginDisabled,allowlisted:freshList.exists,userDoc:freshUser.exists?freshUser.data():null});
+      if(!['grant','migrate'].includes(current.action))throw new HttpsError('permission-denied','Admin access was removed.');
+      tx.set(userRef,{role:'admin',email,displayName,allowlistManaged:true,lastSignInAt:now,lastSignInProvider:provider},{merge:true});
+      if(!freshList.exists)tx.create(listRef,{email,addedBy:current.owner?'account owner':'existing admin (migrated)',addedAt:now,uid:auth.uid,displayName,lastSignInAt:now});
+      else tx.update(listRef,{uid:auth.uid,displayName,lastSignInAt:now});
+    });
     await writeAudit({ entityType: 'admin', entityId: email, action: decision.action === 'migrate' ? 'admin.migrated' : 'admin.signin', userId: auth.uid, userEmail: email, note: `Signed in via ${provider || 'unknown'}` });
     if (!passwordLoginDisabled && shouldDisablePasswordLogin({ email, provider })) {
       await AUTH_SETTINGS_DOC().set({ passwordLoginDisabled: true, disabledAt: now, disabledBy: email }, { merge: true });
@@ -838,20 +831,8 @@ exports.syncAdminAccess = onCall({ cors: true }, async (request) => {
   return { admin: false, reason: decision.reason || 'not-listed' };
 });
 
-exports.addAdminEmail = onCall({ cors: true }, async (request) => {
-  const admin = await requireAdmin(request.auth);
-  const email = normalizeEmail(request.data?.email);
-  const addProblem = checkAddition({ target: email, requesterEmail: admin.email });
-  if (addProblem) throw new HttpsError(isValidEmail(email) ? 'permission-denied' : 'invalid-argument', addProblem);
-  const ref = db.collection('adminAllowlist').doc(email);
-  if ((await ref.get()).exists) throw new HttpsError('already-exists', 'That email is already on the admin list.');
-  await ref.set({ email, addedBy: admin.email || admin.uid, addedAt: new Date().toISOString() });
-  await writeAudit({ entityType: 'admin', entityId: email, action: 'admin.added', userId: admin.uid, userEmail: admin.email, note: `Added ${email} to the admin list` });
-  return { ok: true, email };
-});
-
 exports.removeAdminEmail = onCall({ cors: true }, async (request) => {
-  const admin = await requireAdmin(request.auth);
+  const admin = await requireAdmin(request.auth,'tools-automation');
   const email = normalizeEmail(request.data?.email);
   const listSnap = await db.collection('adminAllowlist').get();
   const listedEmails = listSnap.docs.map(d => d.id);
@@ -946,10 +927,8 @@ async function authenticateAdmin(req) {
   const match = header.match(/^Bearer (.+)$/);
   if (!match) return null;
   try {
-    const decoded = await getAuth().verifyIdToken(match[1]);
-    const snap = await db.collection('users').doc(decoded.uid).get();
-    if (snap.exists && snap.data().role === 'admin' && await sessionPermitted(decoded)) return { uid: decoded.uid, email: decoded.email };
-    return null;
+    const decoded = await getAuth().verifyIdToken(match[1],true);
+    return await resolveAdmin(db,decoded.uid,decoded,'events-bookings');
   } catch {
     return null;
   }
@@ -1189,3 +1168,7 @@ exports.onVenueChanged = onDocumentWritten({ document: 'venues/{venueId}', regio
 
 // Shared administration endpoints: permissions and audit identity are verified server-side.
 Object.assign(exports,require('./auditedAdmin').register({db,onCall,HttpsError,requireAdmin,FieldValue}));
+
+Object.assign(exports,require('./teamPermissions').register({db,onCall,HttpsError,requireAdmin}));
+
+Object.assign(exports,require('./bookingEmailDecision').register({db,onCall,HttpsError,requireAdmin,FieldValue,emailSecrets,findOverlaps,recomputeVenueConflicts,sendAll,notify,getHijriOverrides,hijriInfoFor,dateKeyOf,logger}));

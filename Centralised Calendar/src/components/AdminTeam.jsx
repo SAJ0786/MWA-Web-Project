@@ -1,86 +1,36 @@
 import {useEffect,useState} from 'react';
-import {Trash2} from 'lucide-react';
+import {Trash2,Pencil,Plus} from 'lucide-react';
 import {OWNER_EMAIL} from '../contexts/AuthContext.jsx';
-import {watchAdminTeam,addAdminEmail,removeAdminEmail} from '../services/adminTeamService.js';
-export default function TeamTab({ currentEmail, canManage }) {
-  const [team, setTeam] = useState(null);
-  const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState('');
-  const [msg, setMsg] = useState(null);
-
-  useEffect(() => watchAdminTeam(setTeam, () => setMsg({ err: true, text: 'Could not load the admin list.' })), []);
-
-  const fmt = iso => iso ? new Date(iso).toLocaleString('en-AU', { timeZone: 'Australia/Sydney', dateStyle: 'medium', timeStyle: 'short' }) : '—';
-
-  async function add(e) {
-    e.preventDefault();
-    const value = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { setMsg({ err: true, text: 'Enter a valid email address.' }); return; }
-    setBusy('add'); setMsg(null);
-    try {
-      await addAdminEmail(value);
-      setEmail('');
-      setMsg({ err: false, text: `${value} can now sign in with Google (or email/password).` });
-    } catch (err) {
-      setMsg({ err: true, text: err?.message || 'Could not add that email.' });
-    } finally { setBusy(''); }
-  }
-
-  async function remove(target) {
-    if (!window.confirm(`Remove admin access for ${target}? They will be signed out of admin features immediately.`)) return;
-    setBusy(target); setMsg(null);
-    try {
-      await removeAdminEmail(target);
-      setMsg({ err: false, text: `${target} no longer has admin access.` });
-    } catch (err) {
-      setMsg({ err: true, text: err?.message || 'Could not remove that email.' });
-    } finally { setBusy(''); }
-  }
-
-  return (
-    <div className="team-tab">
-      <p className="muted">
-        People on this list can sign in as admins with their Google account (or an email/password account using the same address).
-        Every sign-in and change is recorded in the Audit log. Remove someone here to revoke their access immediately.
-      </p>
-      {!canManage && (
-        <p className="team-owner-note" role="note">Only {OWNER_EMAIL} can add or remove admins.</p>
-      )}
-      {canManage && <form className="team-add" onSubmit={add}>
-        <div className="field">
-          <label htmlFor="team-email">Add admin email</label>
-          <input id="team-email" type="email" placeholder="name@gmail.com" value={email} onChange={e => setEmail(e.target.value)} disabled={!!busy} />
-        </div>
-        <button className="btn pri" type="submit" disabled={!!busy || !email.trim()}>{busy === 'add' ? 'Adding…' : 'Add'}</button>
-              </form>}
-      {msg && <div className={msg.err ? 'err' : 'ok'} role={msg.err ? 'alert' : 'status'}>{msg.err ? '⚠ ' : '✓ '}{msg.text}</div>}
-      <div className="wrap">
-        <table>
-          <thead><tr><th>Email</th><th>Name</th><th>Added by</th><th>Added</th><th>Last sign-in</th><th aria-label="Actions" /></tr></thead>
-          <tbody>
-            {team === null && <tr><td colSpan={6} className="muted">Loading…</td></tr>}
-            {team && team.map(m => (
-              <tr key={m.id}>
-                <td>{m.email || m.id}{m.id === OWNER_EMAIL && <span className="team-you">owner</span>}{m.id === currentEmail && <span className="team-you">you</span>}</td>
-                <td>{m.displayName || '—'}</td>
-                <td>{m.addedBy || '—'}</td>
-                <td>{fmt(m.addedAt)}</td>
-                <td>{m.lastSignInAt ? fmt(m.lastSignInAt) : <span className="muted">Never</span>}</td>
-                <td>
-                  {canManage && m.id !== currentEmail && m.id !== OWNER_EMAIL && (
-                    <button type="button" className="btn del" title={`Remove ${m.id}`} aria-label={`Remove ${m.id}`}
-                      disabled={!!busy || team.length <= 1} onClick={() => remove(m.id)}>
-                      <Trash2 size={16} aria-hidden="true" />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {team && !team.length && <tr><td colSpan={6} className="muted">No one is on the list yet. Existing admins are added automatically the next time they sign in.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+import {ADMIN_MODULES,effectiveModules,accessActive} from '@mwa/access';
+import {watchAdminTeam,addAdminEmail,removeAdminEmail,setAdminModules} from '../services/adminTeamService.js';
+import AdminAccessEditor from './AdminAccessEditor.jsx';
+export default function TeamTab({currentEmail,canManage}){
+ const [team,setTeam]=useState(null),[editing,setEditing]=useState(null),[busy,setBusy]=useState(''),[msg,setMsg]=useState(null);
+ useEffect(()=>watchAdminTeam(setTeam,()=>setMsg({err:true,text:'Could not load the admin list.'})),[]);
+ const fmt=iso=>iso?new Date(iso).toLocaleString('en-AU',{timeZone:'Australia/Sydney',dateStyle:'medium',timeStyle:'short'}):'—';
+ async function save({email,modules,expiryDate}){
+  if(!canManage)return;setBusy('save');setMsg(null);
+  try{if(editing.isNew)await addAdminEmail(email,modules,expiryDate);else await setAdminModules(editing.id,modules,expiryDate,editing.permissionsRevision||0);setEditing(null);setMsg({text:'Access saved for '+email+'. Changes apply to existing sessions.'});}catch(e){setMsg({err:true,text:e.message||'Could not save access.'})}finally{setBusy('')}
+ }
+ async function remove(email){
+  if(!canManage||!window.confirm('Remove admin access for '+email+'?'))return;
+  setBusy(email);setMsg(null);try{await removeAdminEmail(email);if(editing?.id===email)setEditing(null);setMsg({text:email+' no longer has admin access.'})}catch(e){setMsg({err:true,text:e.message||'Could not remove this member.'})}finally{setBusy('')}
+ }
+ return <div className="team-tab">
+  <p className="muted">Listed members can sign in with their approved account and use only their assigned modules. Permission changes and expiry are enforced across the website.</p>
+  <p className="team-owner-note">Only {OWNER_EMAIL} can add, edit, renew or remove team members. The owner always has full, indefinite access.</p>
+  {canManage&&!editing&&<button type="button" className="lb lb-default" onClick={()=>{setMsg(null);setEditing({isNew:true})}}><Plus size={16}/>Add team member</button>}
+  {msg&&<div className={msg.err?'err':'ok'} role={msg.err?'alert':'status'}>{msg.text}</div>}
+  {canManage&&editing&&<AdminAccessEditor key={editing.id||'new'} email={editing.email||editing.id||''} initialModules={editing.isNew?[]:effectiveModules(editing)} expiryDate={editing.accessExpiryDate||null} isNew={!!editing.isNew} busy={!!busy} onSave={save} onCancel={()=>setEditing(null)}/>}
+  <div className="team-table-scroll"><table><thead><tr><th>Member</th><th>Module access</th><th>Access duration</th><th>Last sign-in</th>{canManage&&<th>Actions</th>}</tr></thead><tbody>
+   {team===null&&<tr><td colSpan={canManage?5:4}>Loading team…</td></tr>}
+   {team?.map(m=>{const owner=m.id===OWNER_EMAIL,ids=owner?ADMIN_MODULES.map(x=>x.id):effectiveModules(m),expired=!owner&&!accessActive(m);return <tr key={m.id}>
+    <td><strong>{m.displayName||m.email||m.id}</strong>{m.displayName&&<small className="team-email">{m.email||m.id}</small>}{owner&&<span className="team-you">owner</span>}{m.id===currentEmail&&<span className="team-you">you</span>}</td>
+    <td><details><summary>{owner?'Full access':ids.length+' of '+ADMIN_MODULES.length+' modules'}</summary><ul className="team-access-list">{ADMIN_MODULES.filter(x=>ids.includes(x.id)).map(x=><li key={x.id}>{x.name}{!x.live?' (coming soon)':''}</li>)}{!ids.length&&<li>No module access assigned</li>}</ul></details></td>
+    <td>{owner||!m.accessExpiryDate?'Indefinite':<><span className={expired?'team-expired':''}>{expired?'Expired':'Through'} {m.accessExpiryDate}</span><small className="team-email">End of day · Sydney</small></>}</td><td>{m.lastSignInAt?fmt(m.lastSignInAt):'Never'}</td>
+    {canManage&&<td>{owner?<span className="muted">Protected owner</span>:<div className="team-row-actions"><button type="button" className="lb lb-outline lb-sm" disabled={!!busy} onClick={()=>{setMsg(null);setEditing(m)}} aria-label={'Edit access for '+m.id}><Pencil size={15}/>Edit access</button><button type="button" className="lb lb-outline lb-sm" disabled={!!busy} onClick={()=>remove(m.id)} aria-label={'Remove '+m.id}><Trash2 size={15}/></button></div>}</td>}
+   </tr>})}
+   {team?.length===0&&<tr><td colSpan={canManage?5:4}>No team members listed.</td></tr>}
+  </tbody></table></div>
+ </div>;
 }
-

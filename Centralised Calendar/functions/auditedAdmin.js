@@ -38,7 +38,7 @@ function register({db,onCall,HttpsError,requireAdmin,FieldValue}) {
     });return {id:ref.id};
   });
   const changeHijriMonth = onCall(async request=>{
-    const actor=await requireAdmin(request.auth);const {hYear,hMonth,gDate,remove=false}=request.data || {};
+    const actor=await requireAdmin(request.auth,'calendar-management');const {hYear,hMonth,gDate,remove=false}=request.data || {};
     if(!Number.isInteger(hYear)||hYear<1300||hYear>1600||!Number.isInteger(hMonth)||hMonth<1||hMonth>12||typeof remove!=='boolean'||(!remove && !validDate(gDate)))throw new HttpsError('invalid-argument','Enter a valid Hijri month, year and Gregorian date.');
     const ref=db.doc('calendarSettings/hijri');let overrides;
     await db.runTransaction(async tx=>{const snap=await tx.get(ref);const before=snap.exists?snap.data().overrides || []:[];
@@ -48,7 +48,7 @@ function register({db,onCall,HttpsError,requireAdmin,FieldValue}) {
     });return {overrides};
   });
   const changeIslamicEvent = onCall(async request=>{
-    const actor=await requireAdmin(request.auth);const {id,revision,data}=request.data || {};let clean;
+    const actor=await requireAdmin(request.auth,'calendar-management');const {id,revision,data}=request.data || {};let clean;
     try { clean=cleanIslamic(data); }catch(error){throw invalid(error);}
     if(id && (typeof id!=='string' || id.includes('/')))throw new HttpsError('invalid-argument','Invalid event.');
     const ref=id?db.collection('keyIslamicEvents').doc(id):db.collection('keyIslamicEvents').doc();
@@ -60,13 +60,15 @@ function register({db,onCall,HttpsError,requireAdmin,FieldValue}) {
     });return {id:ref.id};
   });
   const recordActivity = onCall(async request=>{
-    const actor=await requireAdmin(request.auth);const {module,action,entityId=''}=request.data || {};
+    const actor=await requireAdmin(request.auth,null);const {module,action,entityId=''}=request.data || {};
     const allowed={'module.opened':['events-bookings','calendar-management','tools-automation','website-cms','islamic-events','website'], 'session.signout':['tools-automation'], 'calendar.exported':['events-bookings'], 'appearance.changed':['website']};
     if(!allowed[action]?.includes(module) || typeof entityId!=='string' || entityId.length>160)throw new HttpsError('invalid-argument','Unsupported activity.');
+    if(action==='module.opened'&&module!=='website')await requireAdmin(request.auth,module==='islamic-events'?'calendar-management':module);
+    if(action==='calendar.exported')await requireAdmin(request.auth,'events-bookings');
     await db.collection('auditLog').add(auditEntry({module,action,entityType:'activity',entityId,userId:actor.uid,userEmail:actor.email}));return {ok:true};
   });
   const getAuditEntries = onCall(async request=>{
-    await requireAdmin(request.auth);let filters;try{filters=auditFilters(request.data);}catch(error){throw invalid(error);}
+    await requireAdmin(request.auth,'tools-automation');let filters;try{filters=auditFilters(request.data);}catch(error){throw invalid(error);}
     const cursor=request.data?.cursor;
     if(cursor && (typeof cursor.timestamp!=='string'||Number.isNaN(Date.parse(cursor.timestamp))||typeof cursor.id!=='string'||cursor.id.includes('/')))throw new HttpsError('invalid-argument','Invalid log cursor.');
     let base=db.collection('auditLog').orderBy('timestamp','desc').orderBy(FieldPath.documentId(),'desc');

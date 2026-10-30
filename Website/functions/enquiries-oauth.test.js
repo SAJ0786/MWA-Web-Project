@@ -3,7 +3,7 @@ test('owner-only OAuth setup binds state to HttpOnly cookie, verifies mailbox an
  const {initializeApp,deleteApp}=require('firebase-admin/app'),{getFirestore}=require('firebase-admin/firestore');
  const C=require('./enquiries-core'),A=require('./enquiries-api'),G=require('./enquiries-gmail');
  const app=initializeApp({projectId:'demo-mwa-enquiries'},'oauth-test'),db=getFirestore(app),original=global.fetch;
- const actor={uid:'oauth-owner',email:C.OWNER,firebase:{sign_in_provider:'google.com'}},origins=new Set([C.SITE]);
+ const actor={uid:'oauth-owner',email:C.OWNER,email_verified:true,firebase:{sign_in_provider:'google.com'}},origins=new Set([C.SITE]);
  const response=()=>({headers:{},status(code){this.code=code;return this},set(key,value){this.headers[key]=value;return this},json(data){this.body=data;return this},redirect(code,url){this.code=code;this.url=url;return this}});
  try{
   await db.doc('users/'+actor.uid).set({role:'admin'});await db.doc('_enquiryPrivate/mailbox').set({connected:false});

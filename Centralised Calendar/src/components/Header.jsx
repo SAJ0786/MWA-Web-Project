@@ -6,7 +6,8 @@ import AppearanceSync from './AppearanceSync.jsx';
 import { defaults } from '@mwa/appearance';
 
 export default function Header({ tab, setTab, onNewBooking }) {
-  const { user, isAdmin, logout } = useAuth();
+  const {user,canAccess,logout}=useAuth();
+  const isAdmin=canAccess('events-bookings');
   const embedded=window.self!==window.top;
   const [brandLogo,setBrandLogo]=useState(defaults.logo||logoUrl);
   if(['calendar-management','tools'].includes(tab) || (embedded && new URLSearchParams(window.location.search).get('view')==='islamic-events'))return <div hidden><AppearanceSync/></div>;

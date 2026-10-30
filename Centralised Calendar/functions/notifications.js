@@ -5,7 +5,7 @@ const { prayerLabel } = require('./prayerTimes');
 
 const ORG_TZ = 'Australia/Sydney';
 const ORG_NAME = 'Muhammadi Welfare Association';
-const SITE_URL = 'https://eventscalendar.muhammadiwelfare.org.au';
+const SITE_URL = 'https://refreshed.muhammadiwelfare.org.au/calendar/';
 const ADMIN_TO = 'Events@muhammadiwelfare.org.au';
 const ADMIN_CC = 'admin@muhammadiwelfare.org.au';
 const REPLY_TO = 'Events@muhammadiwelfare.org.au';
@@ -57,11 +57,12 @@ function detailRows(e, hijri, { forAdmin = false } = {}) {
   return rows.filter(([, v]) => v);
 }
 
-function render({ heading, intro, rows = [], extra = [], footerNote = '' }) {
+function render({ heading, intro, rows = [], extra = [], footerNote = '', actions = null }) {
   const text = [
     heading, '', intro, '',
     ...rows.map(([k, v]) => `${k}: ${v}`),
     ...(extra.length ? ['', ...extra] : []),
+    ...(actions?['',actions.approve?'Approve request: '+actions.approve:'Approve unavailable: this request has a conflict.','Reject request: '+actions.reject,'Sign in with Events & Bookings access and confirm your decision.']:[]),
     '', footerNote || `Live calendar: ${SITE_URL}`,
     '', ORG_NAME, '81-89 Clifton Avenue, Kemps Creek NSW 2178'
   ].join('\n');
@@ -72,8 +73,10 @@ function render({ heading, intro, rows = [], extra = [], footerNote = '' }) {
 <tr><td style="padding:22px 24px 8px"><h2 style="margin:0 0 10px;font-size:20px;color:${GREEN}">${esc(heading)}</h2><p style="margin:0 0 14px;line-height:1.5">${esc(intro)}</p>
 ${rows.length ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:14px">${rows.map(([k, v]) => `<tr><td style="padding:6px 10px 6px 0;color:#555;white-space:nowrap;vertical-align:top;border-bottom:1px solid #e3efe7">${esc(k)}</td><td style="padding:6px 0;border-bottom:1px solid #e3efe7;font-weight:600">${esc(v)}</td></tr>`).join('')}</table>` : ''}
 ${extra.map(l => `<p style="margin:12px 0 0;line-height:1.5">${esc(l)}</p>`).join('')}
+${actions?`<p style="margin:22px 0 12px">${actions.approve?`<a href="${esc(actions.approve)}" style="display:inline-block;background:#176446;color:white;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600">Approve request</a>`:`<span aria-disabled="true" style="display:inline-block;background:#e6e8e7;color:#69736d;padding:12px 20px;border-radius:6px">Approve unavailable — conflict</span>`} &nbsp; <a href="${esc(actions.reject)}" style="display:inline-block;background:#fff;color:#813e3e;border:1px solid #c9b3b3;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600">Reject request</a></p><p style="font-size:12px;color:#666;line-height:1.5">Sign in with Events &amp; Bookings access and confirm your decision. Availability is checked again before approval.</p>`:''}
+
 </td></tr>
-<tr><td style="padding:18px 24px 22px;font-size:12px;color:#6d6d6d;border-top:2px solid ${GREEN}">${esc(footerNote || 'Program dates may change based on moonsighting. Please check the live calendar at')} <a href="${SITE_URL}" style="color:${GREEN};font-weight:700">eventscalendar.muhammadiwelfare.org.au</a><br>${ORG_NAME} \u00b7 81-89 Clifton Avenue, Kemps Creek NSW 2178</td></tr>
+<tr><td style="padding:18px 24px 22px;font-size:12px;color:#6d6d6d;border-top:2px solid ${GREEN}">${esc(footerNote || 'Program dates may change based on moonsighting. Please check the live calendar at')} <a href="${SITE_URL}" style="color:${GREEN};font-weight:700">Open MWA calendar</a><br>${ORG_NAME} \u00b7 81-89 Clifton Avenue, Kemps Creek NSW 2178</td></tr>
 </table></td></tr></table></body></html>`;
   return { text, html };
 }
@@ -95,11 +98,15 @@ function submissionAdmin(e, hijri, overlaps = []) {
   const extra = overlaps.length
     ? ['\u26A0 This request overlaps existing booking(s):', ...overlaps.map(o => `\u2022 ${o.title || 'Untitled'} \u2013 ${fmtDate(o.startAt)}, ${fmtTime(o.startAt)}\u2013${fmtTime(o.endAt)} (${o.status}${o.venueName ? `, ${o.venueName}` : ''})`)]
     : [];
+  const blocked=overlaps.length>0||e.hasConflict===true;
+  if(blocked&&!overlaps.length)extra.push('This request has a conflict. Approval from this email is unavailable.');
+  const actionUrl=decision=>SITE_URL+'?booking='+encodeURIComponent(e.id)+'&decision='+decision;
+  const actions=e.id?{approve:blocked?null:actionUrl('approve'),reject:actionUrl('reject')}:null;
   extra.push(`Review it in the admin calendar: ${SITE_URL}`);
   return mail(ADMIN_TO, `${overlaps.length ? '\u26A0 Overlap \u2013 ' : ''}New booking request: ${e.title}`, render({
     heading: overlaps.length ? 'New booking request (overlap flagged)' : 'New booking request',
     intro: 'A new booking request is waiting for review.',
-    rows: detailRows(e, hijri, { forAdmin: true }), extra
+    rows: detailRows(e, hijri, { forAdmin: true }), extra, actions
   }), { cc: ADMIN_CC });
 }
 
